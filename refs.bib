@@ -1,0 +1,648 @@
+% refs.bib -- chem-methods-lecture bibliography database
+% Style: natbib numeric + bibtex (plainnat-like). Do NOT use biblatex.
+% Key convention: firstauthorYEARkeyword  (e.g. perdew1996pbe)
+% Rules (CONTRACT.md §7, §13):
+%   * Chapter agents may ONLY cite keys present in this file.
+%   * New references go to refs-pending.bib with a "% PENDING" comment,
+%     never inline into this file. The integrator merges them.
+%   * Non-ASCII names are written with TeX escapes so bibtex is encoding-safe.
+
+% ======================================================================
+% 1. TEXTBOOKS
+% ======================================================================
+
+@book{szabo1996,
+  author    = {Attila Szabo and Neil S. Ostlund},
+  title     = {Modern Quantum Chemistry: Introduction to Advanced Electronic Structure Theory},
+  publisher = {Dover Publications},
+  address   = {Mineola, NY},
+  year      = {1996}
+}
+
+@book{helgaker2000,
+  author    = {Trygve Helgaker and Poul J{\o}rgensen and Jeppe Olsen},
+  title     = {Molecular Electronic-Structure Theory},
+  publisher = {Wiley},
+  address   = {Chichester},
+  year      = {2000},
+  doi       = {10.1002/9781119019572}
+}
+
+@book{jensen2017,
+  author    = {Frank Jensen},
+  title     = {Introduction to Computational Chemistry},
+  edition   = {3},
+  publisher = {Wiley},
+  address   = {Chichester},
+  year      = {2017}
+}
+
+@book{cramer2004,
+  author    = {Christopher J. Cramer},
+  title     = {Essentials of Computational Chemistry: Theories and Models},
+  edition   = {2},
+  publisher = {Wiley},
+  address   = {Chichester},
+  year      = {2004}
+}
+
+@book{parr1989,
+  author    = {Robert G. Parr and Weitao Yang},
+  title     = {Density-Functional Theory of Atoms and Molecules},
+  publisher = {Oxford University Press},
+  address   = {New York},
+  year      = {1989}
+}
+
+@book{shavitt2009,
+  author    = {Isaiah Shavitt and Rodney J. Bartlett},
+  title     = {Many-Body Methods in Chemistry and Physics: {MBPT} and Coupled-Cluster Theory},
+  publisher = {Cambridge University Press},
+  address   = {Cambridge},
+  year      = {2009}
+}
+
+% ======================================================================
+% 2. FOUNDATIONS
+% ======================================================================
+
+@article{hohenberg1964,
+  author  = {Pierre Hohenberg and Walter Kohn},
+  title   = {Inhomogeneous Electron Gas},
+  journal = {Physical Review},
+  volume  = {136},
+  pages   = {B864--B871},
+  year    = {1964},
+  doi     = {10.1103/PhysRev.136.B864}
+}
+
+@article{kohn1965,
+  author  = {Walter Kohn and Lu Jeu Sham},
+  title   = {Self-Consistent Equations Including Exchange and Correlation Effects},
+  journal = {Physical Review},
+  volume  = {140},
+  pages   = {A1133--A1138},
+  year    = {1965},
+  doi     = {10.1103/PhysRev.140.A1133}
+}
+
+@article{moller1934,
+  author  = {Christian M{\o}ller and Milton S. Plesset},
+  title   = {Note on an Approximation Treatment for Many-Electron Systems},
+  journal = {Physical Review},
+  volume  = {46},
+  pages   = {618--623},
+  year    = {1934},
+  doi     = {10.1103/PhysRev.46.618}
+}
+
+@article{lowdin1955,
+  author  = {Per-Olov L{\"o}wdin},
+  title   = {Quantum Theory of Many-Particle Systems. {I}. {P}hysical Interpretations by Means of Density Matrices, Natural Spin-Orbitals, and Collective Coordinates},
+  journal = {Physical Review},
+  volume  = {97},
+  pages   = {1474--1489},
+  year    = {1955},
+  doi     = {10.1103/PhysRev.97.1474}
+}
+
+@article{lowdin1959corr,
+  author  = {Per-Olov L{\"o}wdin},
+  title   = {Correlation Problem in Many-Electron Quantum Mechanics. {I}. {R}eview of Different Approaches and Discussion of Some Current Ideas},
+  journal = {Advances in Chemical Physics},
+  volume  = {2},
+  pages   = {207--322},
+  year    = {1959}
+}
+
+@article{koopmans1934,
+  author  = {Tjalling Koopmans},
+  title   = {{\"U}ber die Zuordnung von Wellenfunktionen und Eigenwerten zu den Einzelnen Elektronen eines Atoms},
+  journal = {Physica},
+  volume  = {1},
+  pages   = {104--113},
+  year    = {1934},
+  doi     = {10.1016/S0031-8914(34)90011-2}
+}
+
+@article{burke2012,
+  author  = {Kieron Burke},
+  title   = {Perspective on density functional theory},
+  journal = {The Journal of Chemical Physics},
+  volume  = {136},
+  pages   = {150901},
+  year    = {2012},
+  doi     = {10.1063/1.4704546}
+}
+
+% ======================================================================
+% 3. WAVE-FUNCTION METHODS (HF -> MP2 -> CI -> CC -> MR)
+% ======================================================================
+
+@article{cizek1966,
+  author  = {Ji{\v{r}}{\'{\i}} {\v{C}}{\'{\i}}{\v{z}}ek},
+  title   = {On the Correlation Problem in Atomic and Molecular Systems. {C}alculation of Wavefunction Components in {U}rsell-Type Expansion Using Quantum-Field Theoretical Methods},
+  journal = {The Journal of Chemical Physics},
+  volume  = {45},
+  pages   = {4256--4266},
+  year    = {1966},
+  doi     = {10.1063/1.1727484}
+}
+
+@article{purvis1982,
+  author  = {George D. Purvis and Rodney J. Bartlett},
+  title   = {A full coupled-cluster singles and doubles model: {T}he inclusion of disconnected triples},
+  journal = {The Journal of Chemical Physics},
+  volume  = {76},
+  pages   = {1910--1918},
+  year    = {1982},
+  doi     = {10.1063/1.443164}
+}
+
+@article{raghavachari1989,
+  author  = {Krishnan Raghavachari and Gary W. Trucks and John A. Pople and Martin Head-Gordon},
+  title   = {A fifth-order perturbation comparison of electron correlation theories},
+  journal = {Chemical Physics Letters},
+  volume  = {157},
+  pages   = {479--483},
+  year    = {1989},
+  doi     = {10.1016/S0009-2614(89)87395-6}
+}
+
+@article{knowles1988,
+  author  = {Peter J. Knowles and Hans-Joachim Werner},
+  title   = {An efficient method for the evaluation of coupling coefficients in configuration interaction calculations},
+  journal = {Chemical Physics Letters},
+  volume  = {145},
+  pages   = {514--522},
+  year    = {1988}
+}
+
+@article{werner1988,
+  author  = {Hans-Joachim Werner and Peter J. Knowles},
+  title   = {An efficient internally contracted multiconfiguration-reference configuration interaction method},
+  journal = {The Journal of Chemical Physics},
+  volume  = {89},
+  pages   = {5803--5814},
+  year    = {1988}
+}
+
+@article{roos1980,
+  author  = {Bj{\"o}rn O. Roos and Peter R. Taylor and Per E. M. Siegbahn},
+  title   = {A complete active space {SCF} method ({CASSCF}) using a unitary group invariant approach},
+  journal = {Chemical Physics},
+  volume  = {48},
+  pages   = {157--173},
+  year    = {1980},
+  doi     = {10.1016/0009-2614(80)80175-6}
+}
+
+@article{andersson1990,
+  author  = {Kerstin Andersson and Per-{\AA}ke Malmqvist and Bj{\"o}rn O. Roos and Andrzej J. Sadlej and Krzysztof Wolinski},
+  title   = {Second-order perturbation theory with a {CASSCF} reference function},
+  journal = {The Journal of Chemical Physics},
+  volume  = {94},
+  pages   = {5483--5488},
+  year    = {1990},
+  doi     = {10.1063/1.460285}
+}
+
+@article{angeli2001,
+  author  = {Celestino Angeli and Renzo Cimiraglia and Stefano Evangelisti and Thierry Leininger and Jean-Paul Malrieu},
+  title   = {Introduction of $n$-electron valence states for multireference perturbation theory},
+  journal = {The Journal of Chemical Physics},
+  volume  = {114},
+  pages   = {10252--10264},
+  year    = {2001},
+  doi     = {10.1063/1.1361246}
+}
+
+@article{langhoff1974,
+  author  = {Stephen R. Langhoff and Ernest R. Davidson},
+  title   = {Configuration interaction calculations on the nitrogen molecule},
+  journal = {International Journal of Quantum Chemistry},
+  volume  = {8},
+  pages   = {61},
+  year    = {1974}
+}
+
+@article{grimme2003scsmp2,
+  author  = {Stefan Grimme},
+  title   = {Improved second-order {M{\o}ller-Plesset} perturbation theory by separate scaling of parallel- and antiparallel-spin pair correlation energies},
+  journal = {The Journal of Chemical Physics},
+  volume  = {118},
+  pages   = {9095--9102},
+  year    = {2003},
+  doi     = {10.1063/1.1569242}
+}
+
+% ======================================================================
+% 4. DENSITY FUNCTIONALS AND DISPERSION
+% ======================================================================
+
+@article{vosko1980,
+  author  = {S. H. Vosko and L. Wilk and M. Nusair},
+  title   = {Accurate spin-dependent electron liquid correlation energies for local spin density calculations: a comparative analysis},
+  journal = {Canadian Journal of Physics},
+  volume  = {58},
+  pages   = {1200--1211},
+  year    = {1980},
+  doi     = {10.1139/p80-159}
+}
+
+@article{ceperley1980,
+  author  = {David M. Ceperley and Berni J. Alder},
+  title   = {Ground State of the Electron Gas by a Stochastic Method},
+  journal = {Physical Review Letters},
+  volume  = {45},
+  pages   = {566--569},
+  year    = {1980},
+  doi     = {10.1103/PhysRevLett.45.566}
+}
+
+@article{perdew1981sie,
+  author  = {John P. Perdew and Alex Zunger},
+  title   = {Self-interaction correction to density-functional approximation for many-electron systems},
+  journal = {Physical Review B},
+  volume  = {23},
+  pages   = {5048--5079},
+  year    = {1981},
+  doi     = {10.1103/PhysRevB.23.5048}
+}
+
+@article{becke1988,
+  author  = {Axel D. Becke},
+  title   = {Density-functional exchange-energy approximation with correct asymptotic behavior},
+  journal = {Physical Review A},
+  volume  = {38},
+  pages   = {3098--3100},
+  year    = {1988},
+  doi     = {10.1103/PhysRevA.38.3098}
+}
+
+@article{lee1988,
+  author  = {Chengteh Lee and Weitao Yang and Robert G. Parr},
+  title   = {Development of the {C}olle-{S}alvetti correlation-energy formula into a functional of the electron density},
+  journal = {Physical Review B},
+  volume  = {37},
+  pages   = {785--789},
+  year    = {1988},
+  doi     = {10.1103/PhysRevB.37.785}
+}
+
+@article{becke1993b3lyp,
+  author  = {Axel D. Becke},
+  title   = {Density-functional thermochemistry. {III}. {T}he role of exact exchange},
+  journal = {The Journal of Chemical Physics},
+  volume  = {98},
+  pages   = {5648--5652},
+  year    = {1993},
+  doi     = {10.1063/1.464913}
+}
+
+@article{perdew1996pbe,
+  author  = {John P. Perdew and Kieron Burke and Matthias Ernzerhof},
+  title   = {Generalized Gradient Approximation Made Simple},
+  journal = {Physical Review Letters},
+  volume  = {77},
+  pages   = {3865--3868},
+  year    = {1996},
+  doi     = {10.1103/PhysRevLett.77.3865}
+}
+
+@article{adamo1999pbe0,
+  author  = {Carlo Adamo and Vincenzo Barone},
+  title   = {Toward reliable density functional methods without adjustable parameters: {T}he {PBE0} model},
+  journal = {The Journal of Chemical Physics},
+  volume  = {110},
+  pages   = {6158},
+  year    = {1999},
+  doi     = {10.1063/1.478522}
+}
+
+@article{ernzerhof1999,
+  author  = {Matthias Ernzerhof and Gustavo E. Scuseria},
+  title   = {Assessment of the {P}erdew-{B}urke-{E}rnzerhof exchange-correlation functional},
+  journal = {The Journal of Chemical Physics},
+  volume  = {110},
+  pages   = {5029},
+  year    = {1999},
+  doi     = {10.1063/1.478401}
+}
+
+@article{tao2003,
+  author  = {Jianmin Tao and John P. Perdew and Viktor N. Staroverov and Gustavo E. Scuseria},
+  title   = {Climbing the Density Functional Ladder: Nonempirical Meta-Generalized Gradient Approximation Designed for Molecules and Solids},
+  journal = {Physical Review Letters},
+  volume  = {91},
+  pages   = {146401},
+  year    = {2003},
+  doi     = {10.1103/PhysRevLett.91.146401}
+}
+
+@article{sun2015scan,
+  author  = {Jianwei Sun and Adrienn Ruzsinszky and John P. Perdew},
+  title   = {Strongly Constrained and Appropriately Normed Semilocal Density Functional},
+  journal = {Physical Review Letters},
+  volume  = {115},
+  pages   = {036402},
+  year    = {2015},
+  doi     = {10.1103/PhysRevLett.115.036402}
+}
+
+@article{furness2020r2scan,
+  author  = {James W. Furness and Aaron D. Kaplan and Jinliang Ning and John P. Perdew and Jianwei Sun},
+  title   = {Accurate and Numerically Efficient $r^2${SCAN} Meta-Generalized Gradient Approximation},
+  journal = {The Journal of Physical Chemistry Letters},
+  volume  = {11},
+  pages   = {8208--8215},
+  year    = {2020},
+  doi     = {10.1021/acs.jpclett.0c02405}
+}
+
+@article{mardirossian2016wb97mv,
+  author  = {Narbe Mardirossian and Martin Head-Gordon},
+  title   = {$\omega${B97M-V}: A combinatorially optimized, range-separated hybrid, meta-{GGA} density functional with {VV10} nonlocal correlation},
+  journal = {The Journal of Chemical Physics},
+  volume  = {144},
+  pages   = {214110},
+  year    = {2016},
+  doi     = {10.1063/1.4952647}
+}
+
+@article{grimme2006b2plyp,
+  author  = {Stefan Grimme},
+  title   = {Semiempirical hybrid density functional with perturbative second-order correlation},
+  journal = {The Journal of Chemical Physics},
+  volume  = {124},
+  pages   = {034108},
+  year    = {2006},
+  doi     = {10.1063/1.2148954}
+}
+
+@article{goerigk2011pwpb95,
+  author  = {Lars Goerigk and Stefan Grimme},
+  title   = {Efficient and Accurate Double-Hybrid-Meta-{GGA} Density Functionals---Evaluation with the Extended {GMTKN30} Database for General Main Group Thermochemistry, Kinetics, and Noncovalent Interactions},
+  journal = {Journal of Chemical Theory and Computation},
+  volume  = {7},
+  pages   = {291--309},
+  year    = {2011},
+  doi     = {10.1021/ct100466k}
+}
+
+@article{brandenburg2018b973c,
+  author  = {Jan Gerit Brandenburg and Christoph Bannwarth and Andreas Hansen and Stefan Grimme},
+  title   = {{B97-3c}: A revised low-cost variant of the {B97-D} density functional method},
+  journal = {The Journal of Chemical Physics},
+  volume  = {148},
+  pages   = {064104},
+  year    = {2018},
+  doi     = {10.1063/1.5012601}
+}
+
+@article{grimme2021r2scan3c,
+  author  = {Stefan Grimme and Andreas Hansen and Sebastian Ehlert and Jan-Michael Mewes},
+  title   = {$r^2${SCAN-3c}: A ``{S}wiss army knife'' composite electronic-structure method},
+  journal = {The Journal of Chemical Physics},
+  volume  = {154},
+  pages   = {064103},
+  year    = {2021},
+  doi     = {10.1063/5.0040021}
+}
+
+@article{grimme2010d3,
+  author  = {Stefan Grimme and Jens Antony and Stephan Ehrlich and Helge Krieg},
+  title   = {A consistent and accurate ab initio parametrization of density functional dispersion correction ({DFT-D}) for the 94 elements {H-Pu}},
+  journal = {The Journal of Chemical Physics},
+  volume  = {132},
+  pages   = {154104},
+  year    = {2010},
+  doi     = {10.1063/1.3382344}
+}
+
+@article{grimme2011d3bj,
+  author  = {Stefan Grimme and Stephan Ehrlich and Lars Goerigk},
+  title   = {Effect of the damping function in dispersion corrected density functional theory},
+  journal = {Journal of Computational Chemistry},
+  volume  = {32},
+  pages   = {1456--1465},
+  year    = {2011},
+  doi     = {10.1002/jcc.21759}
+}
+
+@article{caldeweyher2019d4,
+  author  = {Eike Caldeweyher and Sebastian Ehlert and Andreas Hansen and Hagen Neugebauer and Sebastian Spicher and Christoph Bannwarth and Stefan Grimme},
+  title   = {A generally applicable atomic-charge dependent {L}ondon dispersion correction},
+  journal = {The Journal of Chemical Physics},
+  volume  = {150},
+  pages   = {154122},
+  year    = {2019},
+  doi     = {10.1063/1.5090222}
+}
+
+@article{kruse2012gcp,
+  author  = {Hagen Kruse and Stefan Grimme},
+  title   = {A geometrical correction for the inter- and intramolecular basis set superposition error in tetramer to hexamer clusters},
+  journal = {The Journal of Chemical Physics},
+  volume  = {136},
+  pages   = {154101},
+  year    = {2012}
+}
+
+% ======================================================================
+% 5. BASIS SETS
+% ======================================================================
+
+@article{weigend2005def2,
+  author  = {Florian Weigend and Reinhart Ahlrichs},
+  title   = {Balanced basis sets of split valence, triple zeta valence and quadruple zeta valence quality for {H} to {Rn}: {D}esign and assessment of accuracy},
+  journal = {Physical Chemistry Chemical Physics},
+  volume  = {7},
+  pages   = {3297--3305},
+  year    = {2005},
+  doi     = {10.1039/b508541a}
+}
+
+@article{weigend2006aux,
+  author  = {Florian Weigend},
+  title   = {Accurate {C}oulomb-fitting basis sets for {H} to {Rn}},
+  journal = {Physical Chemistry Chemical Physics},
+  volume  = {8},
+  pages   = {1057--1065},
+  year    = {2006},
+  doi     = {10.1039/b515676h}
+}
+
+@article{hellweg2007aux,
+  author  = {Arnim Hellweg and Christof H{\"a}ttig and Sebastian H{\"o}fener and Wim Klopper},
+  title   = {Optimized accurate auxiliary basis sets for {RI-MP2} and {RI-CC2} calculations for the atoms {Rb} to {Rn}},
+  journal = {Theoretical Chemistry Accounts},
+  volume  = {117},
+  pages   = {587--597},
+  year    = {2007},
+  doi     = {10.1007/s00214-007-0250-5}
+}
+
+@article{dunning1989ccpvdz,
+  author  = {Thom H. Dunning},
+  title   = {Gaussian basis sets for use in correlated molecular calculations. {I}. {T}he atoms boron through neon and hydrogen},
+  journal = {The Journal of Chemical Physics},
+  volume  = {90},
+  pages   = {1007--1023},
+  year    = {1989},
+  doi     = {10.1063/1.456153}
+}
+
+% ======================================================================
+% 6. SEMIEMPIRICAL METHODS AND FORCE FIELDS
+% ======================================================================
+
+@article{bannwarth2019gfn2,
+  author  = {Christoph Bannwarth and Sebastian Ehlert and Stefan Grimme},
+  title   = {Extended Tight-Binding Quantum Chemistry Methods},
+  journal = {Journal of Chemical Theory and Computation},
+  volume  = {15},
+  pages   = {1652--1672},
+  year    = {2019},
+  doi     = {10.1021/acs.jctc.8b01176}
+}
+
+@article{spicher2020gfnff,
+  author  = {Sebastian Spicher and Stefan Grimme},
+  title   = {Robust Atomistic Modeling of Materials, Organometallic, and Biochemical Systems},
+  journal = {Angewandte Chemie International Edition},
+  volume  = {59},
+  pages   = {15665--15673},
+  year    = {2020},
+  doi     = {10.1002/anie.202004239}
+}
+
+@article{stewart2007pm6,
+  author  = {James J. P. Stewart},
+  title   = {Optimization of parameters for semiempirical methods {V}: {M}odification of {NDDO} approximations and application to 70 elements},
+  journal = {Journal of Molecular Modeling},
+  volume  = {13},
+  pages   = {1173},
+  year    = {2007},
+  doi     = {10.1007/s00894-007-0233-4}
+}
+
+@article{dewar1985am1,
+  author  = {Michael J. S. Dewar and E. G. Zoebisch and Eamonn F. Healy and James J. P. Stewart},
+  title   = {The development and use of quantum mechanical molecular models. {76}. {AM1}: a new general purpose quantum mechanical molecular model},
+  journal = {Journal of the American Chemical Society},
+  volume  = {107},
+  pages   = {3902},
+  year    = {1985}
+}
+
+@article{dewar1977mndo,
+  author  = {Michael J. S. Dewar and Walter Thiel},
+  title   = {Ground states of molecules. {38}. {T}he {MNDO} method. {A}pproximations and parameters},
+  journal = {Journal of the American Chemical Society},
+  volume  = {99},
+  pages   = {4899},
+  year    = {1977}
+}
+
+@article{rappe1992uff,
+  author  = {Anthony K. Rapp{\'e} and Carla J. Casewit and K. S. Colwell and William A. Goddard III and William M. Skiff},
+  title   = {{UFF}, a full periodic table force field for molecular mechanics and molecular dynamics simulations},
+  journal = {Journal of the American Chemical Society},
+  volume  = {114},
+  pages   = {10024--10035},
+  year    = {1992}
+}
+
+@article{cornell1995amber,
+  author  = {Wendy D. Cornell and Piotr Cieplak and Christopher I. Bayly and Ian R. Gould and Kenneth M. Merz and David M. Ferguson and David C. Spellmeyer and Thomas Fox and James W. Caldwell and Peter A. Kollman},
+  title   = {A Second Generation Force Field for the Simulation of Proteins, Nucleic Acids, and Organic Molecules},
+  journal = {Journal of the American Chemical Society},
+  volume  = {117},
+  pages   = {5179--5197},
+  year    = {1995},
+  doi     = {10.1021/ja00124a002}
+}
+
+@article{mackerell1998charmm,
+  author  = {Alexander D. MacKerell, Jr. and Donald Bashford and Malcolm Bellott and Robert L. Dunbrack, Jr. and Jeff D. Evanseck and Martin J. Field and Stefan Fischer and Jiahai Gao and Hong Guo and Soohaeng Ha and David Joseph-McCarthy and Lukasz Kuchnir and Katrin F. Kuczera and Feng T. K. Lau and Chris Mattos and Steve Michnick and Thai Ngo and Dzung T. Nguyen and Bethany Prodhom and William E. Reiher and Beno{\^i}t Roux and Matthew Schlenkrich and Jeffrey C. Smith and Robert Stote and John Straub and Mika Watanabe and Jola Wi{\'o}rkiewicz-Kuczera and Daqi Yin and Martin Karplus},
+  title   = {All-Atom Empirical Potential for Molecular Modeling and Dynamics Studies of Proteins},
+  journal = {The Journal of Physical Chemistry B},
+  volume  = {102},
+  pages   = {3586--3616},
+  year    = {1998},
+  doi     = {10.1021/jp973084f}
+}
+
+@article{jorgensen1996oplsaa,
+  author  = {William L. Jorgensen and David S. Maxwell and Julian Tirado-Rives},
+  title   = {Development and Testing of the {OPLS} All-Atom Force Field on Conformational Energetics and Properties of Organic Liquids},
+  journal = {Journal of the American Chemical Society},
+  volume  = {118},
+  pages   = {11225--11236},
+  year    = {1996},
+  doi     = {10.1021/ja9621760}
+}
+
+@article{ewald1921,
+  author  = {Paul P. Ewald},
+  title   = {Die Berechnung optischer und elektrostatischer Gitterpotentiale},
+  journal = {Annalen der Physik},
+  volume  = {369},
+  pages   = {253--287},
+  year    = {1921}
+}
+
+@article{lennardjones1931,
+  author  = {John E. Lennard-Jones},
+  title   = {Cohesion},
+  journal = {Proceedings of the Physical Society},
+  volume  = {43},
+  pages   = {461--476},
+  year    = {1931},
+  doi     = {10.1088/0959-5309/43/5/301}
+}
+
+% ======================================================================
+% 7. SOFTWARE AND REVIEWS
+% ======================================================================
+
+@article{neese2012orca,
+  author  = {Frank Neese},
+  title   = {The {ORCA} program system},
+  journal = {Wiley Interdisciplinary Reviews: Computational Molecular Science},
+  volume  = {2},
+  pages   = {73--78},
+  year    = {2012},
+  doi     = {10.1002/wcms.81}
+}
+
+@article{neese2020orca,
+  author  = {Frank Neese and Frank Wennmohs and Ute Becker and Christoph Riplinger},
+  title   = {The {ORCA} quantum chemistry program package},
+  journal = {The Journal of Chemical Physics},
+  volume  = {152},
+  pages   = {224108},
+  year    = {2020},
+  doi     = {10.1063/5.0004608}
+}
+
+@article{bartlett2007cc,
+  author  = {Rodney J. Bartlett and Monika Musia{\l}},
+  title   = {Coupled-cluster theory in quantum chemistry},
+  journal = {Reviews of Modern Physics},
+  volume  = {79},
+  pages   = {291--352},
+  year    = {2007},
+  doi     = {10.1103/RevModPhys.79.291}
+}
+
+@article{lischka2018mr,
+  author  = {Hans Lischka and Dana Nachtigallov{\'a} and Ad{\'e}lia J. A. Aquino and P{\'e}ter G. Szalay and Felix Plasser and Francisco B. C. Machado and Mario Barbatti},
+  title   = {Multireference Approaches for Excited States of Molecules},
+  journal = {Chemical Reviews},
+  volume  = {118},
+  pages   = {7293--7361},
+  year    = {2018},
+  doi     = {10.1021/acs.chemrev.8b00244}
+}
