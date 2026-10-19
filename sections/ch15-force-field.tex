@@ -1,3 +1,192 @@
+% ============================================================
+% sections/ch15-force-field.tex —— 第 15 章 力场：能不能彻底去掉电子？
+% 页数配额：5 页（±1）。数值只取自 data/*.csv。
+% ============================================================
+
 \section{力场：能不能彻底去掉电子？}
 \label{ch:15:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}xTB 的精度与转移性有限，参数域之外会失效；而百万原子级体系仍需要更廉价的方法。\\
+\textbf{本章为什么存在：}彻底去掉电子自由度，把玻恩--奥本海默势能面直接用经典解析函数（键合项 + 非键合项 + 参数）表示，从而把成本压到原子对量级。\\
+\textbf{本章留下的新问题：}力场不能断键、不能描述电子转移与激发态——那么面对一个具体问题，到底该选哪个方法？
+\end{problemchain}
+
+% ---- 2. 方法卡片 ----
+\begin{methodcard}
+\textbf{方法}：分子力场（force field，FF），代表 GFN-FF\quad
+\textbf{文献}：\citep{spicher2020gfnff,rappe1992uff,cornell1995amber,mackerell1998charmm,jorgensen1996oplsaa}\\
+\textbf{核心近似}：电子自由度被完全积分掉；能量写成原子坐标的经典解析函数，由键合项、非键合项与经验参数组成；不出现波函数、密度或轨道\\
+\textbf{关键方程}：式~\eqref{ch:15:eq:total-energy}（总能分解）\\
+\textbf{ORCA 关键词}：\texttt{! GFN-FF}\\
+\textbf{成本标度}：$\mathcal{O}(N^2)$；使用邻接表与截断后可接近 $\mathcal{O}(N)$\quad
+\textbf{能否变分 / 尺寸一致}：否（经典势能面，不是变分近似）/ 是（能量按键与原子对可加）\\
+\textbf{典型失效}：断键与成键、电子转移、激发态、质子转移、自旋态变化
+\end{methodcard}
+
+% ---- 3. 正文 ----
+\subsection{键合项：键伸缩、角弯曲、二面角与 improper}
+\label{ch:15:sec:bonded}
+
+力场的出发点是承认第 2 章的玻恩--奥本海默近似：化学问题可以化成核坐标 $\mathbf{R}$ 上的势能面 $U(\mathbf{R})$。量子化学方法用电子结构计算这个面；力场则直接假设它有一组简单的解析形式。最通用的骨架是
+\begin{equation}
+U_{\mathrm{total}}
+= U_{\mathrm{bond}} + U_{\mathrm{ang}} + U_{\mathrm{tor}} + U_{\mathrm{imp}}
++ U_{\mathrm{vdW}} + U_{\mathrm{elec}} + U_{\mathrm{pol}},
+\label{ch:15:eq:total-energy}
+\end{equation}
+其中前四项只作用于由化学键连接（或共享中心原子）的原子，称为\textbf{键合项}（bonded term）；后三项作用于空间上靠近的原子对或位点，称为\textbf{非键合项}（nonbonded term）。不同力场的项数与具体函数形式不同，有的省略 $U_{\mathrm{pol}}$，有的把氢键单列，但式~\eqref{ch:15:eq:total-energy} 足以概括经典力场的基本结构。
+
+最简单的键伸缩项是谐振子
+\begin{equation}
+U_{\mathrm{bond}}
+= \sum_{\mathrm{bonds}} \tfrac12 k_b\,\bigl(r-r_0\bigr)^2,
+\label{ch:15:eq:bond-stretch}
+\end{equation}
+其中 $r$ 是键长，$r_0$ 是平衡键长，$k_b$ 是力常数。式~\eqref{ch:15:eq:bond-stretch} 在 $r_0$ 附近是对真实势能面的良好近似，但 $r\to\infty$ 时能量趋于无穷，因此\textbf{谐振子力场永远不能断键}。更物理的替代是 Morse 势
+$U=D_e[1-\ee^{-a(r-r_0)}]^2$，它在 $r\to\infty$ 时趋于 $D_e$，允许解离；但标准生物分子力场大多仍用谐振子，因为它们的参数化目标是平衡构象附近的采样，而不是反应。
+
+角弯曲项同样用谐振子近似
+\begin{equation}
+U_{\mathrm{ang}}
+= \sum_{\mathrm{angles}} \tfrac12 k_\theta\,\bigl(\theta-\theta_0\bigr)^2,
+\label{ch:15:eq:angle-bend}
+\end{equation}
+其中 $\theta$ 是由三个原子定义的键角，$\theta_0$ 是平衡角。式~\eqref{ch:15:eq:angle-bend} 与式~\eqref{ch:15:eq:bond-stretch} 形式相同，都是平衡点附近的二阶展开；对平面基团（如芳香环、酰胺），角弯曲与 improper 项共同维持局部平面性；对四面体中心，角弯曲与二面角共同决定构象能垒。
+
+二面角（torsion）项描述绕中心键旋转的周期性势能，通常写成 Fourier 级数
+\begin{equation}
+U_{\mathrm{tor}}
+= \sum_{\mathrm{dihedrals}}\sum_{n}
+\frac{V_n}{2}\Bigl[1+\cos\bigl(n\varphi-\gamma_n\bigr)\Bigr],
+\label{ch:15:eq:dihedral}
+\end{equation}
+其中 $\varphi$ 是二面角，$V_n$ 是第 $n$ 阶势垒高度，$\gamma_n$ 是相位。式~\eqref{ch:15:eq:dihedral} 的周期性来自绕键旋转 $360^\circ$ 后结构复原；$n=3$ 项给出乙烷型的三重势垒，$n=2$ 项给出烯烃或酰胺的平面性偏好。二面角参数是构象能差异的主要来源，也是不同力场（AMBER、CHARMM、OPLS-AA）差异最大的部分之一\citep{cornell1995amber,mackerell1998charmm,jorgensen1996oplsaa}。
+
+improper（非正常二面角）项用于约束一个中心原子与三个取代基的相对取向，常见形式为
+\begin{equation}
+U_{\mathrm{imp}}
+= \sum_{\mathrm{impropers}} \tfrac12 k_\xi\,\bigl(\xi-\xi_0\bigr)^2,
+\label{ch:15:eq:improper}
+\end{equation}
+其中 $\xi$ 是由 improper 定义的离面角或等价夹角。式~\eqref{ch:15:eq:improper} 看起来只是另一个谐振子，但它作用在“平面性”或“手性”自由度上：没有它，芳香环会轻易褶皱，四面体中心的构型也可能翻转。UFF 用统一的规则覆盖整个周期表\citep{rappe1992uff}，而 AMBER、CHARMM、OPLS-AA 则针对蛋白质、核酸与有机液体分别优化了键合项参数\citep{cornell1995amber,mackerell1998charmm,jorgensen1996oplsaa}。
+
+\subsection{非键合项：Lennard-Jones 与 Coulomb}
+\label{ch:15:sec:nonbonded}
+
+非键合项不依赖化学键的连接关系，只依赖原子在空间中的距离。短程排斥与色散通常合并为 Lennard-Jones（LJ）12-6 势
+\begin{equation}
+U_{\mathrm{vdW}}
+= \sum_{A<B} 4D_{e,AB}
+\left[\left(\frac{\sigma_{AB}}{R_{AB}}\right)^{12}
+-\left(\frac{\sigma_{AB}}{R_{AB}}\right)^{6}\right],
+\label{ch:15:eq:lj}
+\end{equation}
+其中 $R_{AB}$ 是原子间距离，$\sigma_{AB}$ 是势能过零的距离，$D_{e,AB}$ 是势阱深度。$R^{-12}$ 项描述闭壳层电子云的 Pauli 排斥，$R^{-6}$ 项描述瞬时偶极--瞬时偶极色散；指数 12 没有严格的量子力学推导，只是计算方便且能给出足够硬的排斥壁。LJ 势的吸引尾 $R^{-6}$ 与第 14 章式~\eqref{ch:14:eq:dispersion} 的色散项同源\citep{lennardjones1931}，但力场通常只用固定的元素对参数，而不像 D4 那样让 $C_6$ 随化学环境变化。
+
+静电项用部分电荷之间的库仑定律表示。在原子单位下
+\begin{equation}
+U_{\mathrm{elec}}
+= \sum_{A<B}\frac{q_A q_B}{R_{AB}},
+\label{ch:15:eq:coulomb}
+\end{equation}
+其中 $q_A$ 是原子部分电荷。实际程序使用 $q$ 以 $e$ 为单位、$R$ 以 \AA{} 为单位，并乘以 $1/(4\pi\epsilon_0)$ 的单位换算因子；式~\eqref{ch:15:eq:coulomb} 只保留物理形式。$q_A$ 不是量子化学中的 Mulliken 电荷，而是力场参数集的一部分：AMBER、CHARMM、OPLS-AA 的电荷通常来自对参考分子做 QM 静电势拟合，再经过经验调整\citep{cornell1995amber,mackerell1998charmm,jorgensen1996oplsaa}。因此换一套电荷模型，同一分子的静电能会变，氢键与离子对的平衡距离也会变。
+
+非键合项还必须处理“近邻重复计数”：1--2（直接成键）与 1--3（共享一个键角）的原子对已经由键合项描述，若再算非键合项就会双重计数。标准做法是把 1--2 与 1--3 对排除，1--4 对按比例缩放（不同力场的缩放因子不同）。这一细节对构象能影响很大，也是“同一分子、不同力场给出不同结果”的常见原因之一。
+
+\subsection{极化与水模型}
+\label{ch:15:sec:polarization}
+
+式~\eqref{ch:15:eq:coulomb} 使用固定部分电荷，意味着分子在环境中的电子分布不随外场变化。真实分子会被邻近电荷极化：偶极矩增大、电荷转移、氢键方向性增强。可极化力场加入诱导偶极项
+\begin{equation}
+U_{\mathrm{pol}}
+= -\frac12\sum_A \alpha_A^{\mathrm{pol}}\,\lvert\mathbf{E}_A\rvert^2,
+\label{ch:15:eq:polarization}
+\end{equation}
+其中 $\alpha_A^{\mathrm{pol}}$ 是原子极化率，$\mathbf{E}_A$ 是位点 $A$ 处的总电场（来自永久电荷与诱导偶极）。诱导偶极 $\boldsymbol{\mu}_A=\alpha_A^{\mathrm{pol}}\mathbf{E}_A$ 又会产生新的电场，因此式~\eqref{ch:15:eq:polarization} 需要自洽求解，或用一个带弹簧的 Drude 粒子模拟电子云位移。
+
+水是检验极化效应的标准体系。三点、四点固定电荷水模型（如 TIP3P、TIP4P、SPC 家族）用固定的 $q$ 与 LJ 参数重现液态水的密度、汽化焓与径向分布；它们在常温常压附近表现很好，但对界面、强电场、离子溶剂化与冰相变的描述受限。可极化水模型与多体势能改善这些性质，代价是参数更多、计算更贵。这里的取舍与第 14 章 xTB 的取舍相同：\textbf{用更少的自由度换更大的规模，代价是离开参数域后没有可预期精度}。
+
+\subsection{Ewald 求和}
+\label{ch:15:sec:ewald}
+
+对周期性体系（晶体、溶液盒），式~\eqref{ch:15:eq:coulomb} 的 $1/R$ 求和条件收敛：直接截断会给出依赖截断半径与盒子的结果。Ewald 求和把库仑势拆成“实空间屏蔽部分 + 倒空间长程部分 + 自能修正”\citep{ewald1921}
+\begin{equation}
+\begin{aligned}
+U_{\mathrm{elec}}
+={}& \tfrac12\sum_{A,B}\sum_{\mathbf{n}}{}' \frac{q_A q_B\,
+   \operatorname{erfc}\bigl(\kappa R_{AB,\mathbf{n}}\bigr)}{R_{AB,\mathbf{n}}}\\
+&+ \frac{2\pi}{V}\sum_{\mathbf{k}\neq 0}
+   \frac{\ee^{-\lvert\mathbf{k}\rvert^2/(4\kappa^2)}}{\lvert\mathbf{k}\rvert^2}
+   \left\lvert\sum_A q_A\,\ee^{\ii\mathbf{k}\cdot\mathbf{r}_A}\right\rvert^2
+- \frac{\kappa}{\sqrt{\pi}}\sum_A q_A^2,
+\end{aligned}
+\label{ch:15:eq:ewald}
+\end{equation}
+其中 $\mathbf{n}$ 是晶格平移矢量，$R_{AB,\mathbf{n}}$ 是原子 $A$ 与 $B$ 的周期像之间的距离，$\kappa$ 是实空间/倒空间的分割参数，$V$ 是盒子体积，$\mathbf{k}$ 是倒格矢。带撇的求和排除 $A=B$ 且 $\mathbf{n}=0$ 的自相互作用，最后一项正是把它扣掉的自能修正。式~\eqref{ch:15:eq:ewald} 的三部分分别收敛很快：实空间用 $\operatorname{erfc}$ 把长程尾截掉，倒空间用高斯因子把高频截掉，因此总和与 $\kappa$ 的选取无关。
+
+Ewald 求和的成本可通过选取最优 $\kappa$ 降到 $\mathcal{O}(N^{3/2})$；若把倒空间部分放到网格上，用粒子网格 Ewald（particle-mesh Ewald，PME）可降到 $\mathcal{O}(N\log N)$。这是生物大分子模拟能处理数十万原子的关键之一。对非周期体系，则用截断加反应场或直接实空间求和；此时式~\eqref{ch:15:eq:ewald} 的倒空间项不再需要。
+
+\subsection{GFN-FF 示例}
+\label{ch:15:sec:gfnff}
+
+GFN-FF 是 Grimme 组提出的“几何、频率、非共价”力场，目标是尽量少的人工干预：不需要用户手动指定原子类型，拓扑与参数由元素、连接关系和几何自动生成，覆盖整个周期表\citep{spicher2020gfnff}。它的能量项与 ORCA 的汇总输出对应，可写成
+\begin{equation}
+E_{\text{GFN-FF}}
+= E_{\mathrm{bond}} + E_{\mathrm{ang}} + E_{\mathrm{tor}}
++ E_{\mathrm{rep}} + E_{\mathrm{es}} + E_{\mathrm{disp}}
++ E_{\mathrm{HB}} + E_{\mathrm{XB}},
+\label{ch:15:eq:gfnff-energy}
+\end{equation}
+其中 $E_{\mathrm{bond}}$、$E_{\mathrm{ang}}$、$E_{\mathrm{tor}}$ 是键合项，$E_{\mathrm{rep}}$ 是短程排斥，$E_{\mathrm{es}}$ 是基于电负性均衡（electronegativity equalization）的静电项，$E_{\mathrm{disp}}$ 是 D4 型色散，$E_{\mathrm{HB}}$ 与 $E_{\mathrm{XB}}$ 分别处理氢键与卤键。式~\eqref{ch:15:eq:gfnff-energy} 与式~\eqref{ch:15:eq:total-energy} 的骨架一致，差别在于 GFN-FF 的电荷与色散系数依赖几何，且氢键/卤键有专门的短程项。
+
+ORCA 中使用 GFN-FF 只需一行关键词和坐标：
+\begin{lstlisting}
+! GFN-FF
+* xyz 0 1
+C   0.0000   0.0000   0.0000
+H   0.6276   0.6276   0.6276
+...
+*
+\end{lstlisting}
+GFN-FF 没有基组，也不做 SCF；一次单点只需求值式~\eqref{ch:15:eq:gfnff-energy} 并解析求梯度。它的成本由非键合原子对决定，标度为 $\mathcal{O}(N^2)$，使用邻接表与截断后可接近 $\mathcal{O}(N)$。GFN-FF 的定位是：大体系几何优化、构象搜索、分子动力学预平衡、材料与生物体系的快速结构生成。它的精度足以区分明显不同的构象，但不足以给出反应能垒或电子结构性质。
+
+\subsection{力场不能做什么}
+\label{ch:15:sec:limits}
+
+力场的根本限制来自式~\eqref{ch:15:eq:total-energy} 的假设：能量只是核坐标的解析函数，电子结构被彻底积分掉。由此产生四条硬边界。
+
+\textbf{不能断键与成键。}式~\eqref{ch:15:eq:bond-stretch} 的谐振子在 $r\to\infty$ 发散，拓扑在模拟开始时就被固定；即使换成 Morse 势，键的断裂也意味着电子重排、电荷转移与成键类型改变，经典势能面没有这些自由度。因此力场不能描述反应、催化、燃烧或光解。
+
+\textbf{不能描述电子转移与氧化还原。}$q_A$ 是参数化的部分电荷，不是可转移的电子数；式~\eqref{ch:15:eq:coulomb} 的静电项无法描述电子从一个分子跳到另一个分子。电荷转移配合物、混合价化合物、电化学界面都需要显式电子结构。
+
+\textbf{不能描述激发态与光化学。}力场只有一个基态势能面，没有激发态、没有跃迁偶极、没有非绝热耦合。光吸收、荧光、光异构化与锥形交叉必须回到第 7--9 章的多参考或 TD-DFT 框架。
+
+\textbf{不能可靠处理质子转移与自旋态变化。}质子转移本质上是断键/成键；自旋态变化需要不同的电子组态。两者都超出经典力场的描述范围。特殊的反应性力场尝试允许键重排，但参数化与转移性代价很高，不能替代量子化学。
+
+这些边界正好把第 14 章与第 15 章连成一条成本—精度谱：xTB 保留电子但参数化，力场连电子都不要。两者都不是“更低一级的 DFT”，而是针对不同问题域的独立方法。什么时候用哪一个，取决于问题是否涉及电子结构的变化——这正是第 16 章决策树要回答的。
+
+% ---- 4. CH4 结果框 ----
+\begin{ch4box}
+CH$_4$，ORCA 关键词 \texttt{! GFN-FF}（无外部基组；GFN-FF 不含电子结构）：
+\[
+E_{\text{GFN-FF}} = -0.630874\ \mathrm{Eh}
+\quad(\text{CSV}: -0.630873896930\ \mathrm{Eh}).
+\]
+同一 CSV 中 CCSD(T)/def2-TZVPP 的总能为 $-40.438598$\,Eh。GFN-FF 的能量零点由参数化定义，只包含经典键合项与非键合项，不含电子动能、核--电子吸引与电子--电子排斥的量子力学分解，因此这个绝对值\textbf{与量子化学方法不可直接比较}。本节不计算、也不报告 GFN-FF 相对 CCSD(T) 的 $\Delta E$。有意义的量是同一 GFN-FF 参数集、同一拓扑下的能量差，例如两个构象的能量差或优化过程中的能量下降。CSV 记录的运行时间为 0.573\,s，与 GFN2-xTB 的 0.570\,s 同量级；CH$_4$ 太小，这个比较不能外推为大体系的成本比。
+\end{ch4box}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{把力场总能量放进 QM 能量表}：力场能量与量子化学方法不可直接比较；$\Delta E$ 必须在同一力场、同一参数集、同一拓扑内计算。
+  \item \textbf{用谐振子力场研究反应}：式~\eqref{ch:15:eq:bond-stretch} 在解离极限发散，拓扑固定，断键/成键问题必须换 xTB、DFT 或多参考方法。
+  \item \textbf{忽略电荷模型与质子化状态}：式~\eqref{ch:15:eq:coulomb} 的 $q_A$ 依赖力场与质子化假设；换一套电荷或改变 pH，结果可能显著不同。
+  \item \textbf{把固定电荷水模型用于强电场界面}：式~\eqref{ch:15:eq:polarization} 被省略时，水分子无法响应界面电场；界面、离子溶剂化与冰相变应使用可极化模型或显式 QM/MM。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+本章回答了“能不能彻底去掉电子”：能。力场把玻恩--奥本海默势能面写成键合项（式~\eqref{ch:15:eq:bond-stretch}--\eqref{ch:15:eq:improper}）与非键合项（式~\eqref{ch:15:eq:lj}、\eqref{ch:15:eq:coulomb}）之和，用参数化电荷、色散系数与力常数描述原子间相互作用；周期性静电用 Ewald 求和（式~\eqref{ch:15:eq:ewald}）处理，可极化模型再加入式~\eqref{ch:15:eq:polarization}。GFN-FF 是这一路线的现代代表（式~\eqref{ch:15:eq:gfnff-energy}），能以 $\mathcal{O}(N^2)$ 或更低的成本处理百万原子级体系。代价是：力场不能断键、不能描述电子转移与激发态，也不能给出电子结构性质。至此，本书的方法谱从 CCSD(T) 的 $\mathcal{O}(N^7)$ 一直铺到力场的 $\mathcal{O}(N^2)$；面对一个具体问题，如何在成本、精度与问题类型之间取舍？带着这个问题，我们进入第 16 章：CH$_4$/H$_2^-$：同一分子、不同方法，如何选？

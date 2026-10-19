@@ -1,3 +1,171 @@
+% ============================================================
+% sections/ch14-xtb.tex —— 第 14 章 xTB：如何把成本降到大规模筛选？
+% 页数配额：5 页（±1）。数值只取自 data/*.csv。
+% ============================================================
+
 \section{xTB：如何把成本降到大规模筛选？}
 \label{ch:14:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}双杂化仍太贵（$\mathcal{O}(N^5)$），无法用于千原子级筛选。\\
+\textbf{本章为什么存在：}紧束缚（tight-binding）只保留价电子与最小价基组，再用自洽电荷（self-consistent charge，SCC）把电荷环境的依赖补回来，从而把成本降到大规模筛选可以接受的范围。\\
+\textbf{本章留下的新问题：}精度与转移性有限——参数化方法没有系统改进的阶梯，换元素、换成键类型就可能失效。
+\end{problemchain}
+
+% ---- 2. 方法卡片 ----
+\begin{methodcard}
+\textbf{方法}：紧束缚半经验方法（extended tight-binding，xTB），代表 GFN2-xTB\quad
+\textbf{文献}：\citep{bannwarth2019gfn2}；彻底去掉电子的下一步 GFN-FF 见 \citep{spicher2020gfnff}\\
+\textbf{核心近似}：只保留价电子与最小价基组；双电子积分与短程排斥用经验参数替代；通过自洽电荷引入电荷环境依赖\\
+\textbf{关键方程}：式~\eqref{ch:14:eq:gfn2-energy}（GFN2-xTB 能量分解）\\
+\textbf{ORCA 关键词}：\texttt{! XTB}\\
+\textbf{成本标度}：$\mathcal{O}(N^2)$–$\mathcal{O}(N^3)$\quad
+\textbf{能否变分 / 尺寸一致}：否（参数化方法，无系统变分上界）/ 是（能量按原子项可加）\\
+\textbf{典型失效}：热化学精度、电子转移、激发态、断键
+\end{methodcard}
+
+% ---- 3. 正文 ----
+\subsection{半经验方法的历史：从 NDDO 到 PM6}
+\label{ch:14:sec:history}
+
+半经验方法的历史，是把 Hartree--Fock 方程中最贵的双电子积分逐项替换为参数的历史。最早的路线以 NDDO（neglect of diatomic differential overlap，忽略双原子微分重叠）为核心：只保留单中心与双中心积分，把三中心、四中心积分全部略去；基组收缩到价层最小基，内层电子与核一起当作冻结的“核实”。MNDO 在这一框架上做了第一轮系统参数化，用实验生成热、几何与偶极矩拟合参数\citep{dewar1977mndo}。
+
+AM1 在 MNDO 的核--核排斥中加入高斯型函数，修正 MNDO 对近距离排斥和氢键的过度估计\citep{dewar1985am1}；PM6 则重新参数化并扩展到 70 种元素，同时改进了色散与卤素、过渡金属的描述\citep{stewart2007pm6}。这条路线的基本取舍始终不变：\textbf{用训练集上的精度换取几个数量级的成本下降}。参数一旦离开训练集覆盖的成键类型，误差没有可预期的上界；这也是“半经验”一词的本义——它不是从第一性原理系统逼近，而是从参考数据拟合。
+
+xTB 属于同一大类，但技术路线不同于 NDDO。它不逐项保留 NDDO 积分，而是从一个最小的价电子紧束缚哈密顿量出发，把缺少的物理效应（色散、键伸缩、角弯曲、扭转、短程排斥）作为独立的经验项加回能量。GFN 是“geometry, frequencies, noncovalent”的缩写，表明参数化的目标性质：几何、振动频率与非共价相互作用\citep{bannwarth2019gfn2}。
+
+\subsection{紧束缚近似}
+\label{ch:14:sec:tight-binding}
+
+紧束缚近似的出发点和第 9 章的 KS 方程相同，仍是广义本征值问题
+$(\mathbf{H}-\varepsilon\mathbf{S})\mathbf{c}=0$，但基组被压到极限：每个原子只保留价层原子轨道（对碳是 $2s2p$，对氢是 $1s$），且不再追求基组完备。哈密顿矩阵的对角元取原子轨道能的参考值，非对角元只保留两个原子之间的“跳跃”积分。最简形式可写成
+\begin{equation}
+H_{\mu\nu}
+= \varepsilon_\mu^{(0)}\,\delta_{\mu\nu}
++ \bigl(1-\delta_{\mu\nu}\bigr)\,t_{\mu\nu}(R_{AB}),
+\label{ch:14:eq:tb-hamiltonian}
+\end{equation}
+其中 $\mu\in A$、$\nu\in B$，$\varepsilon_\mu^{(0)}$ 是原子轨道的参考能级，$t_{\mu\nu}(R_{AB})$ 是随核间距指数衰减的跳跃参数。式~\eqref{ch:14:eq:tb-hamiltonian} 只是概念原型；实际 GFN2-xTB 的 $H^{(0)}$ 还包含距离与角向依赖的两中心项，并通过 Slater--Koster 规则把 $s$、$p$、$d$ 轨道的方向性写进 $t_{\mu\nu}$。
+
+把式~\eqref{ch:14:eq:tb-hamiltonian} 对角化得到轨道系数 $c_{\mu i}$ 与轨道能 $\varepsilon_i$，再由占据数 $n_i$ 构造密度矩阵 $P_{\mu\nu}=\sum_i n_i c_{\mu i}c_{\nu i}$。电子能量为 $E_{\mathrm{el}}=\mathrm{Tr}(PH)$。这一步的计算量与体系大小的关系，取决于矩阵对角化：稠密对角化是 $\mathcal{O}(N^3)$，而矩阵构造（原子轨道对）是 $\mathcal{O}(N^2)$。紧束缚真正省下的是“积分”而不是“线性代数”：双电子积分在 HF/DFT 中是 $\mathcal{O}(N^4)$ 甚至更高，在紧束缚中则完全被参数吸收。
+
+省略双电子积分也意味着省略了电子--电子相互作用对电荷分布的自洽反馈。若只做一次对角化，分子中不同电负性原子之间的电荷转移无法体现，极性分子、离子、氢键体系的能量会系统性出错。SCC 正是为修补这一点而加入的。
+
+\subsection{GFN2-xTB 的能量项}
+\label{ch:14:sec:gfn2}
+
+GFN2-xTB 的总能写成若干物理意义明确的项之和\citep{bannwarth2019gfn2}
+\begin{equation}
+E_{\text{GFN2-xTB}}
+= E_{\mathrm{H0}} + E_{\mathrm{SCC}} + E_{\mathrm{rep}}
++ E_{\mathrm{disp}} + E_{\mathrm{bond}} + E_{\mathrm{ang}} + E_{\mathrm{tor}},
+\label{ch:14:eq:gfn2-energy}
+\end{equation}
+其中 $E_{\mathrm{H0}}$ 是紧束缚哈密顿量给出的电子带能，$E_{\mathrm{SCC}}$ 是电荷涨落的自洽电荷能，$E_{\mathrm{rep}}$ 是短程核--核排斥，$E_{\mathrm{disp}}$ 是色散校正，$E_{\mathrm{bond}}$、$E_{\mathrm{ang}}$、$E_{\mathrm{tor}}$ 分别描述键伸缩、角弯曲与扭转。后三项看起来像力场的键合项，但在 xTB 中它们只用于修正最小基组无法正确描述的势能面形状；电子结构仍由前两项承担。
+
+式~\eqref{ch:14:eq:gfn2-energy} 的分解不是唯一的，也不是“每项都有独立物理观测值”的分解。参数是联合拟合的：改变色散项的阻尼会改变平衡键长，从而改变键伸缩项的残差。理解这一点很重要——xTB 的精度来自整套参数与能量项的配合，而不是某一项单独“更物理”。
+
+\subsection{自洽电荷（SCC）与哈密顿量}
+\label{ch:14:sec:scc}
+
+SCC 的核心是把原子电荷 $q_A$ 当作需要自洽求解的变量。给定密度矩阵后，原子电荷按 Mulliken 型布居定义
+\begin{equation}
+P_{\mu\nu} = \sum_i n_i\,c_{\mu i}c_{\nu i},
+\qquad
+q_A = Z_A - \sum_{\mu\in A}(PS)_{\mu\mu},
+\label{ch:14:eq:scc-charge}
+\end{equation}
+其中 $Z_A$ 是原子的价电子数，$S_{\mu\nu}$ 是重叠矩阵。$q_A$ 进入哈密顿量，给原子轨道能级加上一个由周围电荷产生的势移
+\begin{equation}
+H_{\mu\nu} = H^{(0)}_{\mu\nu}
+- \tfrac12 S_{\mu\nu}\bigl(v_\mu + v_\nu\bigr),
+\qquad
+v_A = \frac{\partial E_{\mathrm{SCC}}}{\partial q_A},
+\label{ch:14:eq:scc-hamiltonian}
+\end{equation}
+其中 $v_\mu$ 是轨道 $\mu$ 所属原子的电荷势。式~\eqref{ch:14:eq:scc-hamiltonian} 与式~\eqref{ch:14:eq:tb-hamiltonian} 的差别，就是 SCC 的全部内容：哈密顿量现在依赖电荷，电荷又依赖哈密顿量的本征矢，必须循环求解。
+
+电荷能采用各向同性二阶展开，并在 GFN2-xTB 中加入三阶在位项
+\begin{equation}
+E_{\mathrm{SCC}}
+= \tfrac12\sum_{A,B}\gamma_{AB}\,q_A q_B
++ \tfrac13\sum_A \Gamma_A\,q_A^3,
+\label{ch:14:eq:scc-energy}
+\end{equation}
+其中 $\gamma_{AB}$ 是电荷--电荷相互作用核（$A=B$ 时为原子化学硬度，$A\neq B$ 时为屏蔽库仑），$\Gamma_A$ 是三阶在位系数。对式~\eqref{ch:14:eq:scc-energy} 求导即得式~\eqref{ch:14:eq:scc-hamiltonian} 中的势
+$v_A=\sum_B\gamma_{AB}q_B+\Gamma_A q_A^2$。GFN2-xTB 还保留各向异性多极静电项，用于描述孤对电子与 $\pi$ 体系的方向性；这些项同样进入 $E_{\mathrm{SCC}}$，但不改变式~\eqref{ch:14:eq:scc-hamiltonian} 的自洽结构。
+
+实际求解按以下循环进行：
+\begin{enumerate}
+  \item 用中性原子电荷作为初猜；
+  \item 由式~\eqref{ch:14:eq:scc-hamiltonian} 构造 $\mathbf{H}$，对角化得到 $\mathbf{c}$ 与 $\varepsilon_i$；
+  \item 由式~\eqref{ch:14:eq:scc-charge} 更新 $P$ 与 $q_A$；
+  \item 用 Broyden 型混合阻尼电荷，重复 2--3，直到电荷变化与能量变化同时低于阈值。
+\end{enumerate}
+CH$_4$ 的 GFN2-xTB 单点只需少量 SCC 迭代即可收敛，说明 SCC 的额外成本远小于一次 HF/DFT 自洽场。对更大体系，迭代次数通常只随体系尺寸缓慢增长，这就是 xTB 能把成本压在 $\mathcal{O}(N^2)$–$\mathcal{O}(N^3)$ 的原因。
+
+\subsection{参数化与色散}
+\label{ch:14:sec:param}
+
+xTB 的参数不是从第一性原理推导出来的，而是通过最小化参考数据上的加权残差得到。若把全部参数记作向量 $\boldsymbol{\theta}$，参数化目标可写成
+\begin{equation}
+L(\boldsymbol{\theta})
+= \frac{\sum_k w_k\bigl[X_k^{\mathrm{calc}}(\boldsymbol{\theta})-X_k^{\mathrm{ref}}\bigr]^2}
+{\sum_k w_k},
+\label{ch:14:eq:param-objective}
+\end{equation}
+其中 $X_k$ 可以是键长、键角、振动频率、非共价相互作用能或生成热，$w_k$ 是各项权重。式~\eqref{ch:14:eq:param-objective} 是一个高度非凸的高维优化问题；GFN2-xTB 对 H 到 Rn（$Z\le 86$）逐元素拟合，并共享大量全局参数\citep{bannwarth2019gfn2}。这也解释了它的两个特征：在训练集覆盖的主族有机分子上表现稳定；在镧系、强关联过渡金属或罕见成键类型上可能迅速退化。
+
+色散是 xTB 不能省略的项。最小价基组无法描述瞬时偶极--瞬时偶极相关，若不显式加回，堆叠、疏水作用与分子晶体结合能会严重偏小。GFN2-xTB 采用 D4 型色散\citep{caldeweyher2019d4}，其能量写成原子对之和
+\begin{equation}
+E_{\mathrm{disp}}
+= -\frac12\sum_{A\neq B}\sum_{n=6,8}
+s_n\,\frac{C_n^{AB}}{R_{AB}^{\,n}}\,f_n(R_{AB}),
+\label{ch:14:eq:dispersion}
+\end{equation}
+其中 $s_n$ 是全局标度因子，$C_n^{AB}$ 是依赖几何（配位数与电荷）的色散系数，$f_n$ 是短程阻尼函数。式~\eqref{ch:14:eq:dispersion} 的 $C_6$ 不是固定的元素对常数，而是随化学环境变化；这是 D4 相比早期 D3 的主要改进，也是 xTB 能同时处理不同氧化态与配位环境的前提。
+
+\subsection{xTB 的定位：几何优化与构象筛选，不是热化学}
+\label{ch:14:sec:positioning}
+
+把 xTB 放回第 1 章的方法地图，它位于“量子化学”与“力场”之间：保留电子与轨道图像，但把所有昂贵的电子结构细节参数化。它的成本可写成
+\begin{equation}
+T(N) = c_2 N^2 + c_3 N^3,
+\label{ch:14:eq:cost-scaling}
+\end{equation}
+其中 $N$ 是原子数，$c_2$ 对应原子对与邻接表的构造，$c_3$ 对应对角化。对小体系 $c_2N^2$ 占主导，对大体系稠密对角化的 $c_3N^3$ 逐渐显现；若使用稀疏矩阵与大体系线性标度技巧，有效标度可接近 $\mathcal{O}(N^2)$。式~\eqref{ch:14:eq:cost-scaling} 也提醒我们：xTB 的“快”主要来自极小的基组与参数化积分，而不是改变了线性代数的渐近标度。
+
+因此 xTB 最适合的任务是：
+\begin{itemize}
+  \item \textbf{几何优化}：数千原子的分子、团簇、表面吸附构型，先优化再选关键点做 DFT；
+  \item \textbf{构象筛选}：同一分子大量构象的相对能量排序，误差通常在可接受范围内，且排序比绝对值更稳健；
+  \item \textbf{分子动力学预平衡}：为后续 QM/MM 或 DFT 采样提供初始结构；
+  \item \textbf{大体系非共价相互作用初筛}：配合 D4 色散，先排除明显不稳定的堆积方式。
+\end{itemize}
+
+它不适合的任务同样明确：\textbf{热化学}（生成热、原子化能、反应能垒）需要 kcal·mol$^{-1}$ 级甚至更好的精度，xTB 的系统误差与参数域限制使其不能替代 DFT/CC；\textbf{电子转移}与\textbf{激发态}需要正确的轨道能级差与电子耦合，紧束缚的最小基组和参数化哈密顿量给不出可靠结果；\textbf{断键}路径涉及多参考与强相关，xTB 的单参考紧束缚框架会系统性失败。把 xTB 当作“小基组 DFT”是另一个常见误解：DFT 的误差可以通过换泛函、加基组系统改进，xTB 没有这条阶梯，它的误差只能通过换参数化版本或换方法来解决。
+
+% ---- 4. CH4 结果框 ----
+\begin{ch4box}
+CH$_4$，ORCA 关键词 \texttt{! XTB}（无外部基组；GFN2-xTB 使用内置的最小价基组）：
+\[
+E_{\text{GFN2-xTB}} = -4.175157\ \mathrm{Eh}
+\quad(\text{CSV}: -4.175157467990\ \mathrm{Eh}).
+\]
+同一 CSV 中 CCSD(T)/def2-TZVPP 的总能为 $-40.438598$\,Eh。两个数字的绝对大小不可比：GFN2-xTB 只含价电子、使用参数化的能量零点，其总能量与量子化学方法（HF、DFT、CCSD(T)）的绝对能量不在同一标尺上，\textbf{与量子化学方法不可直接比较}。因此本节不计算、也不报告 GFN2-xTB 相对 CCSD(T) 的 $\Delta E$。xTB 有意义的量是同一 GFN2-xTB 哈密顿量下的能量差，例如两个构象的能量差或优化前后的能量变化。CSV 记录的运行时间为 0.570\,s（CCSD(T) 为 9.645\,s）；CH$_4$ 太小，这个比值不能外推为大体系的成本比。
+\end{ch4box}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{把 xTB 总能量放进 QM 能量表}：xTB 的总能量与量子化学方法不可直接比较；任何 $\Delta E$ 都必须在同一方法、同一参数化版本内计算。
+  \item \textbf{用 xTB 做热化学或反应能垒}：xTB 的参数目标主要是几何、频率与非共价作用，不是高精度热化学；反应能垒还涉及过渡态与电子结构重排，误差可能远大于构象能误差。
+  \item \textbf{把 xTB 当成“可系统改进的小基组 DFT”}：xTB 是参数化方法，没有变分上界，也没有“加基组/换泛函”的系统收敛路径；超出参数域时只能换方法。
+  \item \textbf{忽略色散与元素覆盖}：去掉式~\eqref{ch:14:eq:dispersion} 的色散项会破坏非共价描述；对参数未充分覆盖的元素，应先做小体系基准测试。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+本章把成本从双杂化的 $\mathcal{O}(N^5)$ 压到 $\mathcal{O}(N^2)$–$\mathcal{O}(N^3)$：紧束缚近似（式~\eqref{ch:14:eq:tb-hamiltonian}）只保留价电子与最小价基组，SCC（式~\eqref{ch:14:eq:scc-charge}--\eqref{ch:14:eq:scc-energy}）用自洽电荷补回电荷环境依赖，GFN2-xTB 再把色散、键伸缩、角弯曲与扭转作为经验项加回（式~\eqref{ch:14:eq:gfn2-energy}、\eqref{ch:14:eq:dispersion}）。它的强项是几何优化、构象筛选与大体系预筛，弱项是热化学、电子转移、激发态与断键。参数化给了它速度，也给了它转移性的天花板。带着这个问题，我们进入第 15 章：力场：能不能彻底去掉电子？
