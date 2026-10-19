@@ -1,3 +1,152 @@
+% ============================================================
+% appendix/app-orca.tex —— 附录 A ORCA 环境与输入模板
+% 本附录只给可复制粘贴的完整输入；关键词含义见正文对应章节。
+% ============================================================
+
 \section{ORCA 环境与输入模板}
 \label{app:orca}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+\lstset{basicstyle=\ttfamily\footnotesize}
+
+本附录是正文的“可执行副本”：环境变量、通用 CH$_4$ 坐标块，以及正文没有完整展示的输入模板。所有模板都用 ORCA 6.1.1\citep{neese2020orca} 实际跑通；关键词的物理含义见第 3--15 章，这里只给用法与容易漏掉的设置。
+
+\subsection{环境变量与可执行文件}
+
+ORCA 6.1.1 安装在 \texttt{/home/xieningke/orca611/orca}，并行依赖 OpenMPI 4.1.8。每次新开 shell 先设置：
+\begin{lstlisting}
+export PATH="$HOME/openmpi418/bin:$PATH"
+export LD_LIBRARY_PATH="$HOME/openmpi418/lib:$LD_LIBRARY_PATH"
+export ORCA=/home/xieningke/orca611/orca
+"$ORCA" --version
+\end{lstlisting}
+若 \texttt{--version} 报找不到共享库，先检查 \texttt{LD\_LIBRARY\_PATH} 是否包含 \texttt{openmpi418/lib}；若 \texttt{mpirun} 版本与 ORCA 不匹配，用 \texttt{which mpirun} 确认它来自 \texttt{openmpi418/bin}。作业目录中保留 \texttt{.gbw}、\texttt{.inp} 与 \texttt{.out}；\texttt{start.gbw} 是轨道初猜的约定文件名。
+
+\subsection{通用 CH$_4$ 模板与 CCSD(T)}
+
+以下坐标块在全书 CH$_4$ 计算中重复使用：$T_d$ 构型，$r(\mathrm{C\!-\!H})=1.087$\,\AA，等价地取 $a=0.6276$\,\AA。\%pal 与 \%maxcore 按机器调整；本书全部 CH$_4$ 计算用 4 核、每核 2500\,MB。把第一行换成 \texttt{! HF}、\texttt{! MP2}、\texttt{! CISD}、\texttt{! PBE}、\texttt{! TPSS}、\texttt{! B3LYP} 等关键词，就得到相应方法模板；CCSD(T) 用下面的完整输入。
+\begin{lstlisting}
+! CCSD(T) def2-TZVPP TightSCF
+%pal nprocs 4
+end
+%maxcore 2500
+* xyz 0 1
+C   0.0000   0.0000   0.0000
+H   0.6276   0.6276   0.6276
+H  -0.6276  -0.6276   0.6276
+H  -0.6276   0.6276  -0.6276
+H   0.6276  -0.6276  -0.6276
+*
+\end{lstlisting}
+CCSD(T) 是单参考参考值。CH$_4$ 用 4 核；H$_2^-$ 必须用 \texttt{\%pal nprocs 2}，否则 ORCA 的 MDCI 模块在电子对计数上会触发 MPI 问题。H$_2^-$ 版本只改三处：第一行保持 \texttt{! CCSD(T) def2-TZVPP TightSCF}，把 \texttt{\%pal nprocs 4} 改成 \texttt{\%pal nprocs 2}，坐标块改成 \texttt{* xyz -1 2} 加两个氢原子。
+
+\subsection{CASSCF / CASPT2 / NEVPT2 / MRCI}
+
+四个方法共用同一套 \texttt{\%casscf} 活性空间设置，差别只在第一行关键词。CH$_4$ 用 CAS(8,8)：8 个价电子进 8 条轨道，单重态基态，只优化一根根。
+\begin{lstlisting}
+! CASSCF def2-TZVPP TightSCF
+%pal nprocs 4
+end
+%maxcore 2500
+%casscf
+  nel 8
+  norb 8
+  mult 1
+  nroots 1
+end
+* xyz 0 1
+C   0.0000   0.0000   0.0000
+H   0.6276   0.6276   0.6276
+H  -0.6276  -0.6276   0.6276
+H  -0.6276   0.6276  -0.6276
+H   0.6276  -0.6276  -0.6276
+*
+\end{lstlisting}
+做 CASPT2、NEVPT2 或 MRCI 时，把第一行分别改成 \texttt{! CASPT2 def2-TZVPP TightSCF}、\texttt{! NEVPT2 def2-TZVPP TightSCF}、\texttt{! MRCI def2-TZVPP TightSCF}，\texttt{\%casscf} 块与坐标块不动。\texttt{\%casscf} 里不写总电荷；电荷只写在 \texttt{* xyz} 行。多重度在 \texttt{\%casscf mult} 与 \texttt{* xyz} 两处出现，必须一致（CH$_4$ 为 1，H$_2^-$ 为 2）。
+
+H$_2^-$ 用最小活性空间 CAS(3,2)：3 个电子进成键 $\sigma$ 与反键 $\sigma^*$ 两条轨道。第一个几何点不加 \texttt{MORead}；后续点把上一点的 \texttt{.gbw} 复制为 \texttt{start.gbw}，并加 \texttt{MORead} 与 \texttt{\%moinp}，以保证轨道连续、避免根翻转。
+\begin{lstlisting}
+! CASSCF def2-TZVPP TightSCF MORead
+%pal nprocs 4
+end
+%maxcore 2500
+%moinp "start.gbw"
+%casscf
+  nel 3
+  norb 2
+  mult 2
+  nroots 1
+end
+* xyz -1 2
+H   0.0000   0.0000   0.3000
+H   0.0000   0.0000  -0.3000
+*
+\end{lstlisting}
+\texttt{nroots 1} 只优化基态；不要用 \texttt{nroots 2} 的态平均结果冒充基态——态平均会把占据数摊成 $1.5/1.5$，与本书表~\ref{ch:16:tab:h2m-summary} 的 $2.0/1.0$ 不是同一个量（第 7 章）。
+
+\subsection{双杂化：AuxC 是必需项}
+
+B2PLYP 与 PWPB95 的 MP2 项用 RI 近似，必须显式给出与轨道基组匹配的辅助基组 \texttt{def2-TZVPP/C}；只写 \texttt{def2-TZVPP} 会退回 AutoAux 或直接报错，能量不可复现。
+\begin{lstlisting}
+! B2PLYP def2-TZVPP def2-TZVPP/C TightSCF
+%pal nprocs 4
+end
+%maxcore 2500
+* xyz 0 1
+C   0.0000   0.0000   0.0000
+H   0.6276   0.6276   0.6276
+H  -0.6276  -0.6276   0.6276
+H  -0.6276   0.6276  -0.6276
+H   0.6276  -0.6276  -0.6276
+*
+\end{lstlisting}
+PWPB95 只改第一行为 \texttt{! PWPB95 def2-TZVPP def2-TZVPP/C TightSCF}。辅助基组必须与轨道基组同一系列：换 \texttt{def2-SVP} 就要配 \texttt{def2-SVP/C}，不能混用。
+
+\subsection{3c 复合方法：不要写基组}
+
+B97-3c 与 r$^2$SCAN-3c 自带内置基组（def2-mTZVP\,/\,def2-mTZVPP）与经验校正。输入中写任何基组关键词都会覆盖内置设置，等于换方法。
+\begin{lstlisting}
+! B97-3c TightSCF
+%pal nprocs 4
+end
+%maxcore 2500
+* xyz 0 1
+C   0.0000   0.0000   0.0000
+H   0.6276   0.6276   0.6276
+H  -0.6276  -0.6276   0.6276
+H  -0.6276   0.6276  -0.6276
+H   0.6276  -0.6276  -0.6276
+*
+\end{lstlisting}
+r$^2$SCAN-3c 只把第一行改成 \texttt{! r2SCAN-3c TightSCF}。3c 方法已经包含 D3 型色散与 gCP 型 BSSE 校正，不要再叠加 \texttt{D3} 或 \texttt{D4}。
+
+\subsection{xTB 与 GFN-FF}
+
+xTB 保留价电子，做 SCC 自洽电荷；GFN-FF 没有电子、没有 SCF、没有基组。两者都只需一行关键词与坐标块。
+\begin{lstlisting}
+! XTB
+%pal nprocs 4
+end
+%maxcore 2500
+* xyz 0 1
+C   0.0000   0.0000   0.0000
+H   0.6276   0.6276   0.6276
+H  -0.6276  -0.6276   0.6276
+H  -0.6276   0.6276  -0.6276
+H   0.6276  -0.6276  -0.6276
+*
+\end{lstlisting}
+\begin{lstlisting}
+! GFN-FF
+%pal nprocs 4
+end
+%maxcore 2500
+* xyz 0 1
+C   0.0000   0.0000   0.0000
+H   0.6276   0.6276   0.6276
+H  -0.6276  -0.6276   0.6276
+H  -0.6276   0.6276  -0.6276
+H   0.6276  -0.6276  -0.6276
+*
+\end{lstlisting}
+ORCA 6 中 \texttt{! XTB} 默认取 GFN2-xTB；要固定版本可写 \texttt{! GFN2-xTB}。两者的总能量零点与 QM 不同，不能与表~\ref{ch:16:tab:ch4-summary} 的 $\Delta E$ 混用（第 14、15 章）。
+
+\lstset{style=orca}

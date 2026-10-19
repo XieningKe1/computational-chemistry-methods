@@ -1,3 +1,85 @@
+% ============================================================
+% appendix/app-glossary.tex —— 附录 D 术语中英对照表
+% 以 CONTRACT §11 为准，按概念分组，共 57 行。
+% ============================================================
+
 \section{术语中英对照表}
 \label{app:glossary}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+表~\ref{app:tab:glossary} 按“基础—相关—波函数—DFT—半经验/力场—性质”的顺序排列，共 57 条。中文词以 CONTRACT §11 为准；同一概念在全书只用这里给出的译名，首次出现时写成“中文（English，缩写）”。
+
+{\small
+\begin{longtable}{@{}p{3.4cm} p{11.2cm}@{}}
+\caption{术语中英对照表（57 条）。}\label{app:tab:glossary}\\
+\toprule
+中文 & English \\
+\midrule
+\endfirsthead
+\multicolumn{2}{@{}l}{\small 表~\ref{app:tab:glossary}（续）}\\
+\toprule
+中文 & English \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+波函数 & wavefunction \\
+多体薛定谔方程 & many-body Schrödinger equation \\
+玻恩--奥本海默近似 & Born--Oppenheimer approximation \\
+斯莱特行列式 & Slater determinant \\
+基组 & basis set \\
+自洽场 & self-consistent field (SCF) \\
+平均场 & mean field \\
+电子相关 & electron correlation \\
+动态相关 & dynamic correlation \\
+静态相关 & static (nondynamic) correlation \\
+尺寸一致性 & size consistency \\
+尺寸广延性 & size extensivity \\
+变分性 & variationality \\
+自旋污染 & spin contamination \\
+微扰理论 & perturbation theory \\
+组态相互作用 & configuration interaction (CI) \\
+耦合簇 & coupled cluster (CC) \\
+活性空间 & active space \\
+自然轨道 & natural orbital \\
+占据数 & occupation number \\
+冻结核 & frozen core \\
+交换相关 & exchange-correlation \\
+泛函 & functional \\
+自相互作用误差 & self-interaction error (SIE) \\
+范围分离 & range separation \\
+双杂化 & double hybrid \\
+紧束缚 & tight-binding \\
+力场 & force field \\
+色散校正 & dispersion correction \\
+色散 & dispersion \\
+辅助基组 & auxiliary basis set \\
+基组重叠误差 & basis set superposition error (BSSE) \\
+势能面 & potential energy surface (PES) \\
+几何优化 & geometry optimization \\
+构象 & conformer \\
+极化 & polarization \\
+Ewald 求和 & Ewald summation \\
+周期性边界条件 & periodic boundary conditions (PBC) \\
+热化学 & thermochemistry \\
+反应能 & reaction energy \\
+活化能 & activation energy \\
+电子亲和能 & electron affinity (EA) \\
+电离能 & ionization energy (IE) \\
+带隙 & band gap \\
+梯度 & gradient \\
+拉普拉斯 & Laplacian \\
+动能密度 & kinetic energy density \\
+等轨道指示器 & iso-orbital indicator \\
+绝热连接 & adiabatic connection \\
+交换相关穴 & exchange-correlation hole \\
+氢键 & hydrogen bond \\
+卤键 & halogen bond \\
+溶剂化 & solvation \\
+隐式溶剂模型 & implicit solvation model \\
+雅各布天梯 & Jacob's ladder \\
+复合方法 & composite method \\
+决策树 & decision tree \\
+\end{longtable}
+}
+
+\noindent{\footnotesize 说明：缩写只在正文首次出现时给出，之后直接用缩写；例如“密度泛函理论（density-functional theory，DFT）”之后写 DFT。表中“尺寸一致性”与“尺寸广延性”是不同概念：前者要求超体系能量等于碎片之和，后者要求能量随粒子数线性标度；截断 CI 两者都不满足，CC 在截断下仍保持广延性。}

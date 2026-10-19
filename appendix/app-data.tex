@@ -1,3 +1,79 @@
+% ============================================================
+% appendix/app-data.tex —— 附录 B 数据获取方式说明
+% 只给目录结构、列定义与脚本用法；不全文打印 CSV。
+% ============================================================
+
 \section{数据获取方式说明}
 \label{app:data}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+本书所有数值都能从仓库中的原始输出与三个 CSV 复现。本附录说明目录结构、列定义与脚本用法；CSV 本身不在这里全文打印，避免把讲义变成数据附录。
+
+\subsection{\texttt{runs/} 目录结构}
+
+每个方法一个目录，输入与输出同名：
+\begin{lstlisting}
+runs/
+  ch4/<name>/<name>.inp        # 例如 runs/ch4/ccsdt/ccsdt.inp
+  ch4/<name>/<name>.out        # ORCA 6.1.1 原始输出
+  h2m/<method>/R<value>/<method>.inp
+  h2m/<method>/R<value>/<method>.out
+\end{lstlisting}
+\texttt{ch4/} 下有 20 个方法目录（\texttt{hf}、\texttt{mp2}、\texttt{cisd}、\texttt{ccsdt}、\texttt{lda}、\texttt{pbe}、\texttt{b973c}、\texttt{tpss}、\texttt{r2scan}、\texttt{r2scan3c}、\texttt{b3lyp}、\texttt{wb97mv}、\texttt{b2plyp}、\texttt{pwpb95}、\texttt{xtb}、\texttt{gfnff}、\texttt{casscf}、\texttt{caspt2}、\texttt{nevpt2}、\texttt{mrci}）。\texttt{h2m/} 下有 6 个方法目录（\texttt{uhf}、\texttt{mp2}、\texttt{ccsdt}、\texttt{casscf}、\texttt{nevpt2}、\texttt{mrci}），每个方法 8 个 \texttt{R0.6}--\texttt{R3.0} 子目录。目录名与方法名不要求与 CSV 的 \texttt{method} 列逐字相同；CSV 的方法名由解析脚本从输入回显中读取。
+
+\subsection{CSV 列定义}
+
+表~\ref{app:tab:csv} 给出三个 CSV 的列名与含义。能量一律为 Eh、6 位小数；\texttt{s2} 为空表示该输出没有打印 $\langle S^2\rangle$，不是“没有自旋污染”。
+
+{\small
+\begin{table}[h]
+\centering
+\caption{数据文件的列定义。}
+\label{app:tab:csv}
+\begin{tabular}{@{}l l p{7.2cm}@{}}
+\toprule
+文件 & 列 & 含义 \\
+\midrule
+\texttt{ch4\_results.csv} & \texttt{method} & 方法名（CSV 行序即第 16 章表~\ref{ch:16:tab:ch4-summary} 的行序） \\
+ & \texttt{basis} & 轨道基组；xTB/GFN-FF 为 \texttt{none} \\
+ & \texttt{energy} & 最后一次 \texttt{FINAL SINGLE POINT ENERGY}（Eh） \\
+ & \texttt{s2} & 最后一次 \texttt{Expectation value of <S**2>}；无则为空 \\
+ & \texttt{converged} & 输出含 \texttt{ORCA TERMINATED NORMALLY} 时为 true \\
+ & \texttt{runtime} & 归一化为 \texttt{HH:MM:SS[.mmm]} \\
+ & \texttt{inp\_path} & 对应 \texttt{.inp} 的绝对路径 \\
+\midrule
+\texttt{h2m\_pes.csv} & \texttt{method} & UHF / MP2 / CCSD(T) / CASSCF / NEVPT2 / MRCI \\
+ & \texttt{R} & 核间距（\AA），0.6--3.0 \\
+ & \texttt{energy} & 该 $R$ 的总能（Eh） \\
+ & \texttt{s2} & 该 $R$ 的 $\langle S^2\rangle$；多参考方法通常为空 \\
+\midrule
+\texttt{h2m\_occupations.csv} & \texttt{R} & 核间距（\AA） \\
+ & \texttt{occ1}, \texttt{occ2} & CAS(3,2) 两条活性轨道的自然占据数 \\
+ & \texttt{deviation\_from\_0\_or\_2} & $\max_p\min(|n_p|,|n_p-2|)$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+}
+
+\subsection{\texttt{parse\_orca.py}}
+
+单文件模式把一条记录打印为 JSON：
+\begin{lstlisting}
+python3 scripts/parse_orca.py runs/ch4/ccsdt/ccsdt.out
+\end{lstlisting}
+批量模式把多行写成 CSV。批量参数可以是一个目录（递归查找 \texttt{**/*.out}），也可以是一个 glob。用 glob 时\textbf{必须加引号}，让 Python 而不是 shell 展开；\texttt{*} 只匹配一层目录，所以 CH$_4$ 的两级结构写成 \texttt{'runs/ch4/*/*.out'}：
+\begin{lstlisting}
+python3 scripts/parse_orca.py --batch 'runs/ch4/*/*.out' --csv /tmp/ch4.csv
+python3 scripts/parse_orca.py --batch 'runs/h2m/*/R*/*.out' --csv /tmp/h2m.csv
+\end{lstlisting}
+解析规则：方法与基组优先取输出中回显的 \texttt{| 1> ! ...} 行，缺失时回退到同名 \texttt{.inp} 的第一条 \texttt{!} 行，再缺失时读输出头 \texttt{Your calculation utilizes the basis:}；能量取最后一次 \texttt{FINAL SINGLE POINT ENERGY}；\texttt{s2} 取最后一次 \texttt{Expectation value of <S**2>}，没有就写 null；失败或截断的作业不抛异常，而是写 null 并向 stderr 打警告。xTB/GFN-FF 没有基组，\texttt{basis} 记为 \texttt{none}。
+
+\subsection{绘图脚本}
+
+两张主图都由 CSV 直接生成，不手工改数：
+\begin{lstlisting}
+python3 scripts/plot_ch4.py --csv data/ch4_results.csv \
+        --out figures/ch16/ch4_deviations.pdf
+python3 scripts/plot_h2m.py --csv data/h2m_pes.csv \
+        --out figures/ch07/h2m_pes.pdf
+\end{lstlisting}
+\texttt{plot\_ch4.py} 自动排除 xTB/GFN-FF 与无基组（\texttt{basis} 为 \texttt{none}）的行，并把 3c 方法画成斜线阴影。\texttt{plot\_h2m.py} 画 $E-E_{\min}$ 与 $\langle S^2\rangle$ 两个面板。脚本依赖 \texttt{matplotlib} 与 \texttt{pandas}，输出为矢量 PDF；字体与配色按 CONTRACT §12 设置，黑白打印仍可区分。

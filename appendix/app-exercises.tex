@@ -1,3 +1,87 @@
+% ============================================================
+% appendix/app-exercises.tex —— 附录 C 习题与解答
+% 10 题，覆盖全书主线；答案 3--6 句，公式不编号。
+% ============================================================
+
 \section{习题与解答}
 \label{app:exercises}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+以下 10 题按全书顺序排列，每题对应一个方法的核心机制。建议先遮住“答”自行推导，再对照；数值题一律以 \texttt{data/*.csv} 为准。
+
+\begin{enumerate}[label=\textbf{\arabic*.}, leftmargin=2.2em, itemsep=6pt]
+
+\item \textbf{HF 能量的 $1/2$ 因子。}从单个 Slater 行列式的能量期望值出发，说明库仑项与交换项前为什么出现 $1/2$，并写出轨道能 $\varepsilon_i$ 与总能量 $E_\HF$ 的关系。
+
+\textbf{答：}对归一化行列式 $\Phi_0$ 求 $\bracket{\Phi_0|\op{H}|\Phi_0}$，单电子部分给出 $\sum_i h_{ii}$，双电子部分给出
+\[
+E_\HF=\sum_i h_{ii}+\tfrac12\sum_{ij}\bigl(J_{ij}-K_{ij}\bigr),
+\]
+其中 $J_{ij}=(ii|jj)$、$K_{ij}=(ij|ji)$。$1/2$ 来自对 $i,j$ 的双重求和：每一对占据轨道被数了两次，而 $J_{ii}=K_{ii}$ 使 $i=j$ 项自动抵消。交换项 $K_{ij}$ 不是额外的物理相互作用，而是行列式反对称性带来的“交换hole”；对 $i=j$ 它恰好抵消自库仑。由 Fock 算符可得 $\varepsilon_i=h_{ii}+\sum_j(J_{ij}-K_{ij})$，因此 $E_\HF=\sum_i\varepsilon_i-\tfrac12\sum_{ij}(J_{ij}-K_{ij})\neq\sum_i\varepsilon_i$；直接把轨道能相加会把电子对相互作用重复计算一次。
+
+\item \textbf{MP2 分母的符号与自旋适配。}写出闭壳层 MP2 的二阶能量，说明它为什么通常为负；再说明 same-spin 与 opposite-spin 分量在 SCS-MP2 中如何缩放。
+
+\textbf{答：}闭壳层 MP2 的双激发振幅为 $t_{ij}^{ab}=\bracket{ij||ab}/(\varepsilon_i+\varepsilon_j-\varepsilon_a-\varepsilon_b)$，二阶能量为
+\[
+E^{(2)}=\sum_{ij}^{\mathrm{occ}}\sum_{ab}^{\mathrm{vir}}
+\frac{\lvert\bracket{ij||ab}\rvert^2}{\varepsilon_i+\varepsilon_j-\varepsilon_a-\varepsilon_b}.
+\]
+对通常的 HOMO--LUMO 能隙，分母为负，分子为非负的矩阵元平方，所以 $E^{(2)}\le 0$，相关能把 HF 能量往下拉。自旋适配把闭壳层空间轨道上的双激发分成 same-spin（SS）与 opposite-spin（OS）两类；SCS-MP2 取 $E_{\mathrm{SCS}}=1.2E_{\mathrm{OS}}+\tfrac13E_{\mathrm{SS}}$，用经验缩放补偿 MP2 对 OS 相关的高估\citep{grimme2003scsmp2}。缩放不改变 $N^5$ 标度，也不修复参考态近简并时的发散。
+
+\item \textbf{CISD 为什么不尺寸一致？}用两个远离的片段 $A$、$B$ 说明。
+
+\textbf{答：}设 $A$ 与 $B$ 相距很远、相互作用可忽略。对碎片分别做 CISD，波函数只含 $A$ 上的单激发或 $B$ 上的单激发；对超体系做 CISD 时，“$A$ 上一个单激发 $\times$ $B$ 上一个单激发”是一个总激发阶数为 2 的组态，因而被包含进来。这个乘积组态在碎片计算中不存在，所以
+\[
+E_{\mathrm{CISD}}(A+B)<E_{\mathrm{CISD}}(A)+E_{\mathrm{CISD}}(B),
+\]
+超体系的关联能被高估，截断 CI 不满足尺寸一致性。Davidson 校正式~\eqref{ch:05:eq:davidson-correction} 用参考态权重估计缺失的高阶激发，能把误差拉近，但不恢复严格的可加性。
+
+\item \textbf{CC 指数拟设为什么尺寸广延？}说明“相连簇”在其中的作用。
+
+\textbf{答：}CC 波函数写成 $\ket{\Psi}=\ee^{\op{T}}\ket{\Phi_0}$，$\op{T}=\op{T}_1+\op{T}_2+\cdots$。对两个无相互作用片段，$\op{T}=\op{T}_A+\op{T}_B$ 且两者对易，于是
+\[
+\ee^{\op{T}_A+\op{T}_B}=\ee^{\op{T}_A}\ee^{\op{T}_B},
+\]
+波函数精确因子化，能量严格可加。把相似变换后的 Hamiltonian 展开，只有相连（connected）簇图贡献能量；非相连图要么因 $\op{T}$ 的乘积被指数重新求和，要么在能量表达式中抵消。正是这一点使 CCSD 在截断到双激发时仍保持尺寸广延，而 CID 不具备该性质\citep{cizek1966,purvis1982}。
+
+\item \textbf{H$_2^-$ 的活性空间与 \texttt{nroots}。}为什么用 CAS(3,2)？为什么本书所有 H$_2^-$ 计算取 \texttt{nroots 1}？
+
+\textbf{答：}H$_2^-$ 有 3 个价电子；最小且物理的活性空间是成键 $\sigma$ 与反键 $\sigma^*$ 两条轨道，即 CAS(3,2)。这两个轨道容纳键的成键/反键近简并，3 个电子在其中的分布给出 4 个行列式，足以描述拉伸时的静态相关。\texttt{nroots 1} 只优化基态一根；若取 \texttt{nroots 2} 做态平均，程序会把基态与激发态的占据数平均，可能得到 $1.5/1.5$ 的“分数占据”，但那是两个态的平均，不是基态。本书表~\ref{ch:16:tab:h2m-summary} 的 CASSCF 占据数是 $2.0/1.0$，正说明 \texttt{nroots 1} 下最小活性空间仍是单组态；多参考必要性由 $\langle S^2\rangle$ 增长与 NEVPT2/MRCI 的大修正给出。
+
+\item \textbf{LDA 的过 binding 与自相互作用误差。}为什么 LDA 常高估结合能、低估反应能垒？
+
+\textbf{答：}LDA 交换能写成 $E_x^{\mathrm{LDA}}=-C\int\rho^{4/3}\,\dd\mathbf{r}$，只依赖局域密度。对严格的一电子体系，Hartree 能 $E_H[\rho]$ 应被交换能完全抵消，但 LDA 的 $E_x$ 不能逐点抵消 $E_H$，残余部分就是自相互作用误差（SIE）。SIE 使电子密度倾向于过度离域，能量对“把电子摊开”的过程给出非物理的稳定化；其后果是分子过度结合、原子化能偏高、过渡态能垒偏低，以及 HOMO 能级偏高。LDA 还缺少梯度信息，在密度变化快的区域（键的断裂、弱相互作用）误差更大\citep{perdew1981sie}。
+
+\item \textbf{全局杂化与范围分离杂化。}精确交换分别修正了什么？
+
+\textbf{答：}全局杂化把固定比例的 HF 交换混进 GGA：
+\[
+E_\xc^{\mathrm{GH}}=aE_x^{\HF}+(1-a)E_x^{\mathrm{GGA}}+E_c^{\mathrm{GGA}},
+\]
+例如 B3LYP 取 $a=0.20$。它在所有距离上使用同一比例，能部分抵消 SIE、改善热化学，但交换势的渐近行为仍是 GGA 的指数衰减，长程电荷转移与 Rydberg 激发仍不准。范围分离杂化用
+\[
+\frac1r=\frac{\operatorname{erf}(\mu r)}{r}+\frac{\operatorname{erfc}(\mu r)}{r}
+\]
+把交换拆成短程与长程：短程用 DFT、长程用 100\% 精确交换（或反过来），从而恢复正确的 $-1/r$ 渐近势，显著改善电荷转移、Rydberg 与非线性光学响应\citep{becke1993b3lyp,adamo1999pbe0,mardirossian2016wb97mv}。代价是多了一个范围参数 $\mu$，且不同参数化之间不可混用。
+
+\item \textbf{双杂化的 MP2 项与 AuxC。}写出双杂化能量表达式，并解释为什么 B2PLYP/PWPB95 必须给辅助基组。
+
+\textbf{答：}双杂化在杂化泛函上再加一个 MP2 型微扰项：
+\[
+E_{\mathrm{DH}}=(1-a_x)E_x^{\mathrm{GGA}}+a_xE_x^{\HF}
++(1-a_c)E_c^{\mathrm{GGA}}+a_cE_c^{\mathrm{MP2}}.
+\]
+$E_c^{\mathrm{MP2}}$ 用 DFT 轨道与轨道能计算，通常通过 RI 近似（resolution of the identity）把四指标积分分解为三指标与二指标；RI 需要一个辅助基组来展开密度拟合。B2PLYP 与 PWPB95 的输入必须写 \texttt{def2-TZVPP/C}（与 \texttt{def2-TZVPP} 配对）；省略 AuxC 时 ORCA 会退回 AutoAux 或直接失败，数值不可复现。辅助基组还必须与轨道基组同系列，不能把 \texttt{def2-SVP/C} 配到 \texttt{def2-TZVPP} 上\citep{grimme2006b2plyp,goerigk2011pwpb95,weigend2006aux}。
+
+\item \textbf{xTB 的 SCC 与能量可比性。}自洽电荷迭代在做什么？为什么 xTB 的总能不能直接和 DFT 比？
+
+\textbf{答：}GFN2-xTB 把电荷搬移写成电负性均衡：每个原子的电负性 $\chi_A(q_A)$ 依赖其部分电荷，平衡条件要求所有原子的电负性相等，由此解出 $\{q_A\}$。Hamiltonian 又依赖这些电荷，所以电荷与轨道必须交替迭代到自洽，这就是 SCC（self-consistent charge）循环；能量包含电子项、原子--原子排斥与 D4 型色散。xTB 的总能来自参数化模型，零点、基组与双电子积分都不是 QM 的定义，因此绝对值没有跨方法意义；只有同一参数集、同一体系内的能量差（构象能、优化路径）才可用\citep{bannwarth2019gfn2}。
+
+\item \textbf{Lennard-Jones 12-6 与断键。}写出 LJ 势，并说明为什么标准力场不能描述键的断裂。
+
+\textbf{答：}LJ 势写作
+\[
+U_{\mathrm{LJ}}(R)=4D_e\left[\left(\frac{\sigma}{R}\right)^{12}-\left(\frac{\sigma}{R}\right)^{6}\right],
+\]
+$R^{-12}$ 项是短程排斥壁，$R^{-6}$ 项是色散吸引，势阱深度为 $D_e$、过零点在 $R=\sigma$。$R\to\infty$ 时 $U_{\mathrm{LJ}}\to0$，看起来可以解离，但力场的键合项用的是谐振子 $U_{\mathrm{bond}}=\tfrac12k_b(r-r_0)^2$，在 $r\to\infty$ 发散；更根本的是，力场把拓扑与原子类型固定，没有电子重排、电荷转移与键级变化。断键/成键需要显式电子结构，必须换 xTB、DFT 或多参考方法\citep{lennardjones1931,spicher2020gfnff}。
+
+\end{enumerate}

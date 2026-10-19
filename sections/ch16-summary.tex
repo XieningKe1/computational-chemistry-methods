@@ -1,3 +1,214 @@
+% ============================================================
+% sections/ch16-summary.tex —— 第 16 章 CH4/H2-：同一分子、不同方法，如何选？
+% 页数配额：5 页（±1）。数值只取自 data/*.csv。
+% ============================================================
+
 \section{CH$_4$/H$_2^-$：同一分子、不同方法，如何选？}
 \label{ch:16:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}方法很多——力场、半经验（xTB）、DFT 的多级泛函、波函数方法（HF$\to$MP2$\to$CI$\to$CC，以及 CASSCF$\to$MRPT/MRCI）——每一种都在某个成本区间内有效，却没有一种对所有问题都最优。\\
+\textbf{本章为什么存在：}把全书 15 章的数值放回同一张“成本—精度—问题类型”坐标系，按“问题需要什么”而不是“方法有多贵”做决策，并给出一棵可执行的决策树。\\
+\textbf{本章留下的新问题：}——（全书收束）。决策树是起点而非终点：真实问题常落在两个叶子的交界处，必须回到具体章节检查该方法的近似是否成立。
+\end{problemchain}
+
+\subsection{CH$_4$ 总表：20 个方法放在同一把尺子上}
+\label{ch:16:sec:ch4-table}
+
+表~\ref{ch:16:tab:ch4-summary} 按 \texttt{data/ch4\_results.csv} 的行序列出全部 20 个方法。参考值是 CCSD(T)/def2-TZVPP 的 $E=-40.438598$\,Eh；$\Delta E$ 由式~\eqref{ch:16:eq:delta-e} 从 CSV 能量逐位换算，正值表示总能量高于参考、负值表示低于参考。所有能量保留 6 位小数，与 CSV 的 \texttt{energy} 列一致。
+\begin{equation}
+\Delta E_{\mathrm{method}}
+= \left(E_{\mathrm{method}}-E_{\mathrm{CCSD(T)}}\right)\times 627.509474
+\quad(\mathrm{kcal\cdot mol^{-1}}).
+\label{ch:16:eq:delta-e}
+\end{equation}
+
+\begin{table}[t]
+\centering
+\caption{CH$_4$/def2-TZVPP 的 20 个方法：总能量与相对 CCSD(T) 的偏差（CSV 行序）。}
+\label{ch:16:tab:ch4-summary}
+{\small
+\begin{tabular}{@{}l l r r p{4.15cm}@{}}
+\toprule
+方法 & 基组 & $E$/Eh & $\Delta E$ & 备注 \\
+\midrule
+HF            & def2-TZVPP   & $-40.214415$ & $+140.68$ & 平均场，无电子相关 \\
+MP2           & def2-TZVPP   & $-40.412099$ & $+16.63$  & 二阶微扰，单参考 \\
+CISD          & def2-TZVPP   & $-40.422685$ & $+9.99$   & 截断 CI，不尺寸一致 \\
+CCSD(T)       & def2-TZVPP   & $-40.438598$ & $0.00$    & 参考值，单参考金标准 \\
+SVWN5         & def2-TZVPP   & $-40.117774$ & $+201.32$ & LDA，最小可行 DFT \\
+PBE           & def2-TZVPP   & $-40.464324$ & $-16.14$  & GGA \\
+B97-3c        & def2-mTZVP   & $-40.497380$ & $-36.89$  & 内置基组，复合方法 \\
+TPSS          & def2-TZVPP   & $-40.541484$ & $-64.56$  & meta-GGA \\
+r$^2$SCAN     & def2-TZVPP   & $-40.500987$ & $-39.15$  & meta-GGA \\
+r$^2$SCAN-3c  & def2-mTZVPP  & $-40.494868$ & $-35.31$  & 内置基组，复合方法 \\
+B3LYP         & def2-TZVPP   & $-40.503278$ & $-40.59$  & 全局杂化，20\% 精确交换 \\
+$\omega$B97M-V & def2-TZVPP  & $-40.492948$ & $-34.11$  & 范围分离杂化 + VV10 \\
+B2PLYP        & def2-TZVPP   & $-40.487287$ & $-30.55$  & 双杂化（含 MP2 项） \\
+PWPB95        & def2-TZVPP   & $-40.489598$ & $-32.00$  & 双杂化（含 MP2 项） \\
+GFN2-xTB      & —            & $-4.175157$  & —         & 半经验，无基组；见下注 \\
+GFN-FF        & —            & $-0.630874$  & —         & 力场，无电子结构；见下注 \\
+CASSCF(8,8)   & def2-TZVPP   & $-40.297163$ & $+88.75$  & 多参考，缺动态相关 \\
+CASPT2        & def2-TZVPP   & $-40.420721$ & $+11.22$  & CAS(8,8) + 二阶微扰 \\
+NEVPT2        & def2-TZVPP   & $-40.405834$ & $+20.56$  & CAS(8,8) + Dyall 微扰 \\
+MRCI          & def2-TZVPP   & $-40.428596$ & $+6.28$   & CAS(8,8) + 单双激发 \\
+\bottomrule
+\end{tabular}
+}
+
+\vspace{2pt}
+\parbox{0.96\linewidth}{\footnotesize 表注：$\Delta E$ 按式~\eqref{ch:16:eq:delta-e} 计算；参考值为 CCSD(T)/def2-TZVPP。B97-3c 与 r$^2$SCAN-3c 使用内置基组 def2-mTZVP\,/\,def2-mTZVPP，是复合方法，不应把其基组改写成 def2-TZVPP。\textbf{GFN2-xTB 与 GFN-FF 的总能不含完整电子结构意义，与量子化学方法不可直接比较}，故其 $\Delta E$ 列填“—”，也不进入图~\ref{ch:16:fig:deviations}。}
+\end{table}
+
+表~\ref{ch:16:tab:ch4-summary} 最容易误读的是符号。DFT 一族的 $\Delta E$ 几乎全为负，不是因为它们“比 CCSD(T) 更准”，而是因为总能量的零点与相关能的分配方式不同：DFT 用近似 $E_\xc$ 同时承担交换与相关，数值上可以低于 CCSD(T)。波函数方法的 $\Delta E$ 则为正（HF $+140.68$、MP2 $+16.63$、CCSD(T) $0$、MRCI $+6.28$），因为它们在各自截断下逐级逼近同一变分/微扰标尺。把“总能量更低”当成“更可靠”，是本章要拆除的第一个误解。
+
+\subsection{偏差条形图：只看量子化学方法}
+\label{ch:16:sec:deviation-plot}
+
+图~\ref{ch:16:fig:deviations} 把表~\ref{ch:16:tab:ch4-summary} 中\textbf{可比较的量子化学方法}（18 个）按 $\Delta E$ 排序画成条形图；GFN2-xTB 与 GFN-FF 被排除，因为它们的绝对值不在同一标尺上。3c 复合方法用橙色斜线阴影标出，其余方法为蓝色实心，黑白打印时仍可区分。
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.80\textwidth]{figures/ch16/ch4_deviations.pdf}
+\caption{CH$_4$ 各方法相对 CCSD(T)/def2-TZVPP 的偏差 $\Delta E$（kcal·mol$^{-1}$，式~\eqref{ch:16:eq:delta-e}）。图中只含量子化学方法；GFN2-xTB 与 GFN-FF 因总能量不可比而被排除。橙色斜线为 3c 复合方法（内置基组）。}
+\label{ch:16:fig:deviations}
+\end{figure}
+
+图~\ref{ch:16:fig:deviations} 的跨度接近 $266$\,kcal·mol$^{-1}$：一端是 LDA 的 $+201.32$，另一端是 TPSS 的 $-64.56$。HF 与 LDA 分别代表“完全忽略相关”和“用局域泛函粗略替代相关”两个极端；MP2 把 HF 的偏差从 $+140.68$ 拉回到 $+16.63$，说明动态相关的主要部分确实由二阶微扰捕获。MR 一侧，CASSCF(8,8) 仍在 $+88.75$，加上 NEVPT2（$+20.56$）或 MRCI（$+6.28$）后才回到与单参考方法同一量级。这张图不是精度排行榜：它只说明在 CH$_4$ 这一个平衡构型上，各方法的总能偏差有多大；换一个分子、换一个反应，排序可能改变。
+
+\subsection{成本—精度分析：贵在哪里，值在哪里}
+\label{ch:16:sec:cost}
+
+表~\ref{ch:16:tab:cost} 把方法族、代表方法、成本标度与表~\ref{ch:16:tab:ch4-summary} 的 $\Delta E$ 并置。成本列给的是形式标度，不含常数因子、内存与并行效率；$\Delta E$ 列只对同一 CH$_4$ 构型有意义。
+
+{\small
+\begin{table}[t]
+\centering
+\caption{方法族的成本标度与 CH$_4$ 总能量偏差。$\Delta E$ 取自表~\ref{ch:16:tab:ch4-summary}，仅用于比较同一构型上的总能偏移。}
+\label{ch:16:tab:cost}
+\begin{tabular}{@{}l l l r@{}}
+\toprule
+方法族 & 代表 & 成本标度 & $\Delta E$/(kcal·mol$^{-1}$) \\
+\midrule
+力场 & GFN-FF & $\mathcal{O}(N^2)$，近 $\mathcal{O}(N)$ & — \\
+半经验 / 紧束缚 & GFN2-xTB & $\mathcal{O}(N^2)$–$\mathcal{O}(N^3)$ & — \\
+LDA & SVWN5 & $\mathcal{O}(N^3)$ & $+201.32$ \\
+GGA & PBE & $\mathcal{O}(N^3)$ & $-16.14$ \\
+meta-GGA & TPSS / r$^2$SCAN & $\mathcal{O}(N^3)$ & $-64.56$ / $-39.15$ \\
+全局杂化 & B3LYP & $\mathcal{O}(N^4)$ & $-40.59$ \\
+范围分离杂化 & $\omega$B97M-V & $\mathcal{O}(N^4)$ & $-34.11$ \\
+双杂化 & B2PLYP / PWPB95 & $\mathcal{O}(N^5)$ & $-30.55$ / $-32.00$ \\
+HF & HF & $\mathcal{O}(N^4)$ & $+140.68$ \\
+MP2 & MP2 & $\mathcal{O}(N^5)$ & $+16.63$ \\
+CCSD(T) & CCSD(T) & $\mathcal{O}(N^7)$ & $0.00$ \\
+CASSCF & CASSCF(8,8) & 活性空间指数 & $+88.75$ \\
+MRPT / MRCI & NEVPT2 / MRCI & $\mathcal{O}(N^5)$–$\mathcal{O}(N^7)$ & $+20.56$ / $+6.28$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+}
+
+成本轴上，从 GFN-FF 到 CCSD(T) 跨越了多个数量级；精度轴上，CH$_4$ 的 $\Delta E$ 却不按成本单调排列：便宜的 PBE（$-16.14$）比昂贵的 CASSCF（$+88.75$）更接近参考总能量。这再次说明总能量差不是精度。真正决定选择的是\textbf{问题类型}：如果问的是构象能、反应能、激发能或断键曲线，误差的抵消方式完全不同，必须看对应章节的失效模式，而不是看这张表的符号。
+
+还要强调两点。第一，表~\ref{ch:16:tab:ch4-summary} 的 $\Delta E$ 是\textbf{总能量偏移}，不是原子化能或键能；CH$_4$ 只有一个构型，无法从中读出反应能误差。第二，CH$_4$ 是弱静态相关体系，CASSCF(8,8) 的 $+88.75$ 主要反映“缺动态相关”，不反映“多参考方法不行”；到了 H$_2^-$ 的拉伸区，单参考方法的问题才会以自旋污染的形式暴露出来。
+
+\subsection{H$_2^-$ 多参考总结：证据不在能量高低}
+\label{ch:16:sec:h2m}
+
+表~\ref{ch:16:tab:h2m-summary} 从 \texttt{data/h2m\_pes.csv} 取出 $R=0.6$、$1.5$、$3.0$\,\AA{} 三个点，列出 UHF、MP2、CCSD(T)、CASSCF(3,2)、NEVPT2 与 MRCI 的 6 位小数能量，并给出 UHF 的 $\langle S^2\rangle$。
+
+{\small
+\begin{table}[t]
+\centering
+\caption{H$_2^-$/def2-TZVPP 在 $R=0.6$、$1.5$、$3.0$\,\AA{} 的能量（Eh）与 UHF 自旋污染。所有 CASSCF 族计算取 \texttt{nroots 1}、活性空间 CAS(3,2)。}
+\label{ch:16:tab:h2m-summary}
+\begin{tabular}{@{}l r r r l@{}}
+\toprule
+方法 & $E(0.6)$ & $E(1.5)$ & $E(3.0)$ & 角色 \\
+\midrule
+UHF      & $-0.934317$ & $-0.988296$ & $-0.971787$ & 单参考，自旋污染 \\
+MP2      & $-0.971165$ & $-1.022084$ & $-0.998513$ & 单参考微扰 \\
+CCSD(T)  & $-0.979462$ & $-1.033385$ & $-1.012426$ & 单参考金标准 \\
+CASSCF   & $-0.933069$ & $-0.983600$ & $-0.958695$ & 多参考，仅静态相关 \\
+NEVPT2   & $-0.966218$ & $-1.019481$ & $-0.997767$ & CASSCF + 动态相关 \\
+MRCI     & $-0.979145$ & $-1.032789$ & $-1.011445$ & CASSCF + 单双激发 \\
+\midrule
+UHF $\langle S^2\rangle$ & 0.754473 & 0.764251 & 0.821141 & 纯二重态为 0.75 \\
+\bottomrule
+\end{tabular}
+\end{table}
+}
+
+表~\ref{ch:16:tab:h2m-summary} 必须诚实地读。第一，CASSCF(3,2) 在\textbf{每一个} $R$ 上都\textbf{高于} UHF，差值从 $0.0012$\,Eh（$0.6$\,\AA）到 $0.0131$\,Eh（$3.0$\,\AA），不是更低。UHF 允许 $\alpha$ 与 $\beta$ 电子占据不同的空间轨道，变分空间更大；CAS(3,2) 用共同空间轨道并强制 \texttt{mult 2}，自旋干净但能量略高。用“CASSCF 更低”来论证多参考必要性是错的。
+
+第二，CAS(3,2) 的自然占据数在\textbf{所有} $R$ 上都是 $2.0000$ 与 $1.0000$（见 \texttt{h2m\_occupations.csv}），不是 $1.5/1.5$。单占据活性轨道的占据数本来就是 $1.0$，“偏离 $0$ 或 $2$”为 $1.0$ 只说明有一个单电子，不是分数静态相关的标志；\texttt{nroots 1} 的输出 CI 向量是单一组态。若做 \texttt{nroots 2} 的态平均，才会把两个态摊成 $1.5/1.5$，但那是态平均的基态，不是本书使用的基态。
+
+第三，多参考的证据来自两处。其一是 UHF 的 $\langle S^2\rangle$：从 $0.754473$（$0.6$\,\AA）增长到 $0.821141$（$3.0$\,\AA），总增量 $0.066668$，远大于 $0.02$；中间有一个小的非单调回落（$0.8$\,\AA{} 的 $0.755273$ 高于 $1.0$\,\AA{} 的 $0.754710$），但整体趋势清楚，说明拉伸区单参考自旋轨道图像失效。其二是 CASSCF 之上的动态相关修正：NEVPT2 比 CASSCF 低 $0.0331$–$0.0391$\,Eh，MRCI 又比 NEVPT2 低 $0.0129$–$0.0137$\,Eh，且在三个 $R$ 上都成立。修正规模本身说明 CASSCF 参考远未完成，而单参考方法在近简并处不能可靠地承担这部分修正。
+
+本书没有给出 H$_2^-$ 的 CASPT2 曲线：ORCA 6.1.1 在 H$_2^-$/CAS(3,2) 的 CASPT2 清理阶段存在已知段错误\footnote{ORCA 6.1.1 在 H$_2^-$/CAS(3,2) 的 CASPT2 清理阶段存在已知段错误；本书因此不做 H$_2^-$ 的 CASPT2 扫描，CH$_4$ 的 CASPT2 数据来自 CAS(8,8) 计算。}。这是实现问题，不是 CASPT2 理论的失效；CH$_4$ 的 CASPT2 行（表~\ref{ch:16:tab:ch4-summary}）说明该方法本身可用。
+
+\subsection{决策树：按问题类型，而不是按方法清单}
+\label{ch:16:sec:tree}
+
+图~\ref{ch:16:fig:tree} 把全书收束成一棵决策树。第一步问“是否需要电子结构”：断键/成键、电子转移、激发态需要 QM；只需要大体系几何或构象筛选时，力场（GFN-FF/UFF/AMBER）更合适。第二步在 QM 内问“是否有强静态相关/近简并”：有则 CASSCF 起步，再用 NEVPT2/MRCI 补动态相关；没有则留在单参考。第三步按单参考目标分派：参考级热化学用 CCSD(T)，大分子热化学/非共价用双杂化或杂化/meta-GGA，弱相互作用优先 $\omega$B97M-V（+D4），快速筛选用 xTB，周期性/大体系用 PBE 或 meta-GGA 加 D3/D4。
+
+\begin{center}
+\begin{tikzpicture}[
+  every node/.style={font=\footnotesize, align=center},
+  q/.style={draw=oiBlue, thick, rounded corners=1.5pt, fill=oiBlue!6,
+            inner sep=3pt, minimum height=0.62cm, text width=3.35cm},
+  leaf/.style={draw=oiGreen, thick, rounded corners=1.5pt, fill=oiGreen!6,
+            inner sep=3pt, minimum height=0.52cm, text width=3.60cm},
+  ff/.style={draw=oiVermillion, thick, rounded corners=1.5pt, fill=oiVermillion!8,
+            inner sep=3pt, minimum height=0.55cm, text width=3.35cm},
+  ar/.style={-{Stealth[length=1.8mm]}, thick, draw=black!70},
+  el/.style={font=\scriptsize, fill=white, inner sep=1pt}
+]
+  \node[q] (q1) at (0,0) {需要电子结构？\\（断键/成键、电子转移、激发态）};
+  \node[ff] (ff) at (-4.6,-2.15) {力场：GFN-FF / UFF / AMBER\\大体系几何、构象筛选};
+  \node[q] (q2) at (0,-2.15) {强静态相关 / 近简并？};
+  \node[leaf] (mr) at (-4.6,-4.25) {CASSCF $\to$ NEVPT2 / MRCI\\断键、双自由基、激发态};
+  \node[q] (q3) at (3.3,-4.05) {单参考目标？};
+
+  \node[leaf] (l1) at (7.6,-1.65) {CCSD(T)\\参考级热化学（小体系）};
+  \node[leaf] (l2) at (7.6,-2.85) {双杂化\\大分子热化学 / 非共价};
+  \node[leaf] (l3) at (7.6,-4.05) {杂化 / meta-GGA\\常规热化学、主族反应};
+  \node[leaf] (l4) at (7.6,-5.25) {$\omega$B97M-V (+D4)\\非共价、弱相互作用};
+  \node[leaf] (l5) at (7.6,-6.45) {GFN2-xTB / PBE(+D3/D4)\\快速筛选、周期性大体系};
+
+  \draw[ar] (q1.south) -- (q2.north) node[el,right]{是};
+  \draw[ar] (q1.south west) -- (ff.north) node[el,left,pos=0.45]{否};
+  \draw[ar] (q2.south west) -- (mr.north) node[el,left,pos=0.45]{是};
+  \draw[ar] (q2.south east) -- (q3.north west) node[el,right,pos=0.45]{否};
+  \draw[ar] (q3.east) -- (l1.west);
+  \draw[ar] (q3.east) -- (l2.west);
+  \draw[ar] (q3.east) -- (l3.west);
+  \draw[ar] (q3.east) -- (l4.west);
+  \draw[ar] (q3.east) -- (l5.west);
+
+  \draw[ar, draw=black!45] (-6.3,-7.0) -- (9.4,-7.0)
+        node[midway,below,font=\scriptsize]{成本 $\uparrow$（向右）};
+\end{tikzpicture}
+\captionof{figure}{方法选择决策树：先按问题类型分派，再在 QM 内按相关类型与目标精度选择。成本向右递增；力场与 xTB 分支不含完整电子结构，只用于几何、构象与快速筛选。}
+\label{ch:16:fig:tree}
+\end{center}
+
+这棵树刻意不按“方法清单”组织。按清单走会得到“从 HF 开始逐级往上试”的线性路径，既昂贵又容易在错误的参考态上做高精度计算；按问题类型走，先排除不需要电子结构的问题，再判断静态相关，最后才在同类方法里按成本选精度。树中的每个叶子都对应本书的一章：CCSD(T) 见第 6 章，CASSCF 见第 7 章，NEVPT2/MRCI 见第 8 章，DFT 梯级见第 9--13 章，xTB 与力场见第 14--15 章。叶子之间的边界不是绝对的：例如“大分子热化学”与“非共价”可能同时成立，此时双杂化与 $\omega$B97M-V 都要试，按体系大小和色散重要性取舍。
+
+\subsection{常见陷阱}
+\label{ch:16:sec:pitfalls}
+
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{基组不一致}：把 B97-3c、r$^2$SCAN-3c 的 def2-mTZVP\,/\,def2-mTZVPP 改写成 def2-TZVPP，等于换了一个方法；3c 的校正参数与内置基组绑定（第 10、11 章）。
+  \item \textbf{忘记色散}：B3LYP 与 B3LYP-D3 是两个方法；非共价体系不用 D3/D4、VV10 或双杂化，会把结合能算得明显偏弱（第 10、12 章）。
+  \item \textbf{忽视对称性破缺与自旋污染}：UHF/MP2/CCSD(T) 在拉伸键处 $\langle S^2\rangle$ 偏离纯自旋值；先看 $\langle S^2\rangle$ 与 $\langle S^2\rangle$ 的增长，再决定是否转多参考（第 7、8 章与表~\ref{ch:16:tab:h2m-summary}）。
+  \item \textbf{泛函版本混用}：B3LYP、B3LYP-D3、B3LYP-D3(BJ) 的参数化不同；r$^2$SCAN 与 r$^2$SCAN-3c 也不是同一方法。引用结果时必须写全版本（第 12、13 章）。
+  \item \textbf{双杂化缺 AuxC}：B2PLYP/PWPB95 的 RI-MP2 项需要 \texttt{def2-TZVPP/C} 一类辅助基组；省略 AuxC 会退回 AutoAux 或直接失败，结果不可复现（第 13 章与附录~\ref{app:orca}）。
+  \item \textbf{3c 基组覆盖不足}：3c 方法的内置基组与校正主要针对主族元素参数化；重元素、过渡金属与强相对论体系不能默认套用（第 10、11 章）。
+  \item \textbf{跨方法比较绝对能量}：GFN2-xTB/GFN-FF 与 QM 的总能零点不同；即使同为 QM，不同基组、不同 $E_\xc$ 的绝对能量也不可直接比较，只能比较同一方法内的能量差（表~\ref{ch:16:tab:ch4-summary} 表注）。
+\end{itemize}
+\end{pitfall}
+
+\subsection*{小结}
+本章把全书收束为三个操作步骤。第一，用表~\ref{ch:16:tab:ch4-summary} 与图~\ref{ch:16:fig:deviations} 看清“同一分子、不同方法”的总能量偏差：CH$_4$ 上从 LDA 的 $+201.32$ 到 TPSS 的 $-64.56$\,kcal·mol$^{-1}$，但符号与大小都不是精度排行榜。第二，用表~\ref{ch:16:tab:cost} 把成本标度与偏差并置，记住更低的总能不等于更准，CH$_4$ 的 $\Delta E$ 只是总能量偏移，不是原子化能。第三，用表~\ref{ch:16:tab:h2m-summary} 的 H$_2^-$ 数据理解多参考：CASSCF(3,2) 在每个 $R$ 上都高于 UHF，占据数是 $2.0/1.0$ 而非 $1.5/1.5$，多参考必要性来自 $\langle S^2\rangle$ 从 $0.754473$ 增长到 $0.821141$，以及 NEVPT2（$-0.0331$ 至 $-0.0391$\,Eh）与 MRCI（$-0.0129$ 至 $-0.0137$\,Eh）的大修正。最后，图~\ref{ch:16:fig:tree} 把选择过程按问题类型组织：先问是否需要电子结构，再问是否有强静态相关，最后按目标精度在单参考方法内分派。决策树是起点而非终点：它告诉你第一枪往哪里打，不替你判断活性空间、基组与泛函版本是否选对；真正的可靠性仍来自回到具体章节检查近似。
