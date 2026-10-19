@@ -8,6 +8,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+export TEXINPUTS="$HOME/texmf-disabled/pgfplots-4.42//:${TEXINPUTS:-}"
 
 if [ "$#" -gt 0 ]; then
   INC=$(IFS=,; echo "$*")

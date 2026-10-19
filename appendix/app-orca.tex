@@ -84,7 +84,7 @@ H   0.0000   0.0000  -0.3000
 
 \subsection{双杂化：AuxC 是必需项}
 
-B2PLYP 与 PWPB95 的 MP2 项用 RI 近似，必须显式给出与轨道基组匹配的辅助基组 \texttt{def2-TZVPP/C}；只写 \texttt{def2-TZVPP} 会退回 AutoAux 或直接报错，能量不可复现。
+B2PLYP 与 PWPB95 的 MP2 项用 RI 近似，必须显式给出与轨道基组匹配的辅助基组 \texttt{def2-TZVPP/C}；只写 \texttt{def2-TZVPP} 会直接报错（不会自动退回四指数 MP2），能量不可复现。
 \begin{lstlisting}
 ! B2PLYP def2-TZVPP def2-TZVPP/C TightSCF
 %pal nprocs 4
