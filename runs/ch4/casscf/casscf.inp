@@ -1,0 +1,17 @@
+! CASSCF def2-TZVPP TightSCF
+%pal nprocs 4
+end
+%maxcore 2500
+%casscf
+  nel 8
+  norb 8
+  mult 1
+  nroots 1
+end
+* xyz 0 1
+C   0.0000   0.0000   0.0000
+H   0.6276   0.6276   0.6276
+H  -0.6276  -0.6276   0.6276
+H  -0.6276   0.6276  -0.6276
+H   0.6276  -0.6276  -0.6276
+*

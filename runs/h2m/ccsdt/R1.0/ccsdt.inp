@@ -1,0 +1,6 @@
+! CCSD(T) def2-TZVPP TightSCF
+%pal nprocs 2 end
+* xyz -1 2
+H   0.0000   0.0000   0.5000
+H   0.0000   0.0000  -0.5000
+*

@@ -1,0 +1,13 @@
+! MRCI def2-TZVPP TightSCF MORead
+%pal nprocs 4 end
+%moinp "start.gbw"
+%casscf
+  nel 3
+  norb 2
+  mult 2
+  nroots 1
+end
+* xyz -1 2
+H   0.0000   0.0000   1.0000
+H   0.0000   0.0000  -1.0000
+*
