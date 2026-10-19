@@ -1,3 +1,181 @@
+% ============================================================
+% sections/ch13-double-hybrid.tex —— 第 13 章 双杂化：把 MP2 装进 DFT 值不值？
+% 页数配额：5 页（±1）。数值只取自 data/ch4_results.csv。
+% ============================================================
+
 \section{双杂化：把 MP2 装进 DFT 值不值？}
 \label{ch:13:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}杂化缺动态相关。\\
+\textbf{本章为什么存在：}在 DFT 上再加一项 MP2 微扰，把动态相关显式补进来。\\
+\textbf{本章留下的新问题：}$N^5$ 成本、强相关失效。
+\end{problemchain}
+
+% ---- 2. 方法卡片 ----
+\begin{methodcard}
+\textbf{方法}：双杂化泛函（double hybrid），代表 B2PLYP 与 PWPB95\quad
+\textbf{文献}：\citep{grimme2006b2plyp,goerigk2011pwpb95}\\
+\textbf{核心近似}：用 DFT 交换/相关加上缩放的二阶微扰（MP2）相关；MP2 项在双杂化自洽轨道上计算\\
+\textbf{关键方程}：式~\eqref{ch:13:eq:double-hybrid}\\
+\textbf{ORCA 关键词}：\texttt{! B2PLYP def2-TZVPP def2-TZVPP/C TightSCF}；\texttt{! PWPB95 def2-TZVPP def2-TZVPP/C TightSCF}\\
+\textbf{成本标度}：$\mathcal{O}(N^5)$\quad
+\textbf{能否变分 / 尺寸一致}：否 / 是（MP2 修正为微扰项，无变分上界；两项均尺寸一致）\\
+\textbf{典型失效}：强静态相关、AuxC 依赖、自旋污染
+\end{methodcard}
+
+% ---- 3. 正文 ----
+\subsection{双杂化的动机：DFT 与 MP2 的交汇}
+\label{ch:13:sec:motivation}
+
+第 12 章的杂化泛函用精确交换修正了交换与 SIE，但相关能仍由半局域泛函给出。从 PBE 等 GGA\citep{perdew1996pbe} 到 B3LYP 等全局杂化\citep{becke1993b3lyp}，相关能始终只依赖局部的密度（以及梯度、动能密度），无法描述电子在瞬时避让中产生的长程动态相关；这正是第 3--4 章用 MP2 补上的那部分能量。一个自然的想法是：既然杂化已经提供了较好的轨道与交换，能不能在它上面再加一项 MP2 型相关？这就是\textbf{双杂化泛函}（double hybrid）\citep{grimme2006b2plyp}。
+
+双杂化泛函的一般形式为
+\begin{equation}
+E_\xc
+= a_x E_x^{\HF}
++ (1-a_x)\,E_x^{\mathrm{DFT}}
++ (1-a_c)\,E_c^{\mathrm{DFT}}
++ a_c\,E_c^{\mathrm{MP2}}.
+\label{ch:13:eq:double-hybrid}
+\end{equation}
+式~\eqref{ch:13:eq:double-hybrid} 与第 12 章式~\eqref{ch:12:eq:global-hybrid} 的唯一区别是最后一项：用比例为 $a_c$ 的 MP2 相关替换掉同样比例的 DFT 相关。$a_c=0$ 时回到普通全局杂化；$a_x$ 与 $a_c$ 同时非零时，交换与相关都“混合”了两种理论，故称“双杂化”。与第 4 章的 MP2 不同，这里的 $E_c^{\mathrm{MP2}}$ 不是在 HF 轨道上计算，而是在双杂化自洽场收敛得到的轨道与轨道能上计算；这一步是双杂化精度的关键，也是它比“HF 的 MP2 加 DFT 修正”更自洽的地方。
+
+从绝热连接看，杂化在交换部分混入了 $\lambda=1$ 端的精确交换，双杂化则进一步用 MP2 型项近似相关能在 $\lambda>0$ 区间的非局域贡献。两者都不是严格的第一原理构造，$a_x$ 与 $a_c$ 通常由训练集拟合；因此双杂化的“双”是经验混合，而不是两个变分原理的叠加。
+
+\subsection{B2PLYP 形式}
+\label{ch:13:sec:b2plyp}
+
+Grimme 2006 年提出的 B2PLYP 是第一个被广泛使用的双杂化\citep{grimme2006b2plyp}。它取 B88 交换与 LYP 相关，参数为 $a_x=0.53$、$a_c=0.27$：
+\begin{equation}
+E_\xc^{\mathrm{B2PLYP}}
+= 0.53\,E_x^{\HF}
++ 0.47\,E_x^{\mathrm{B88}}
++ 0.73\,E_c^{\mathrm{LYP}}
++ 0.27\,E_c^{\mathrm{MP2}}.
+\label{ch:13:eq:b2plyp}
+\end{equation}
+式~\eqref{ch:13:eq:b2plyp} 中交换系数之和为 1、相关系数之和也为 1，因此它没有简单地从 B3LYP 借用参数，而是重新拟合了一套比例。53\% 的精确交换远高于 B3LYP 的 20\%，这进一步压低 SIE，但也让 SCF 更贵、更容易在强相关体系上出现自旋污染。计算流程是：先用式~\eqref{ch:13:eq:b2plyp} 的交换相关势做自洽场，得到轨道与轨道能；再用这些轨道计算 $E_c^{\mathrm{MP2}}$，最后把 0.27 倍的 MP2 相关加回总能量。B2PLYP 是 GGA 型双杂化，其半局域部分不含动能密度。
+
+\subsection{PWPB95：PW 交换 + B95 相关 + MP2}
+\label{ch:13:sec:pwpb95}
+
+PWPB95 是 Goerigk 与 Grimme 在 2011 年提出的双杂化\citep{goerigk2011pwpb95}。它把半局域部分换成 PW91 交换与 B95 相关（B95 是依赖动能密度的 meta-GGA 相关），并取 50\% 精确交换、26.9\% 的微扰相关：
+\begin{equation}
+E_\xc^{\mathrm{PWPB95}}
+= 0.50\,E_x^{\HF}
++ 0.50\,E_x^{\mathrm{PW91}}
++ 0.731\,E_c^{\mathrm{B95}}
++ 0.269\,E_c^{\mathrm{OS\text{-}PT2}}.
+\label{ch:13:eq:pwpb95}
+\end{equation}
+式~\eqref{ch:13:eq:pwpb95} 的 MP2 项不是完整的 MP2，而是\textbf{自旋反平行微扰}（opposite-spin second-order perturbation theory，OS-PT2）：只保留一对电子自旋相反的项，同旋项被完全丢弃。PW91 与 B95 的内禀参数也经过了重新拟合，因此不能把式~\eqref{ch:13:eq:pwpb95} 简单理解为“PW91B95 + 26.9\% MP2”。OS-PT2 使 PWPB95 比 B2PLYP 便宜，同时保留了双杂化对动态相关的描述；由于 B95 含 $\tau$，它的自洽场是 meta-GGA 型的，成本高于 B2PLYP 的 GGA 自洽场。
+
+\subsection{自旋分量缩放（SCS）}
+\label{ch:13:sec:scs}
+
+MP2 的相关能可以按自旋分成同旋（same-spin，SS）与反旋（opposite-spin，OS）两类。标准 MP2 的相关能为
+\begin{equation}
+E_c^{\mathrm{MP2}}
+= \frac{1}{4}\sum_{ij}\sum_{ab}
+\frac{\lvert\langle ij\Vert ab\rangle\rvert^2}
+{\varepsilon_i+\varepsilon_j-\varepsilon_a-\varepsilon_b},
+\qquad
+\Delta_{ij}^{ab}
+= \varepsilon_i+\varepsilon_j-\varepsilon_a-\varepsilon_b,
+\label{ch:13:eq:mp2-term}
+\end{equation}
+其中 $i,j$ 为占据自旋轨道、$a,b$ 为虚自旋轨道，$\langle ij\Vert ab\rangle$ 是反对称化双电子积分。把式~\eqref{ch:13:eq:mp2-term} 的求和按自旋分成两部分：
+\begin{equation}
+E_c^{\mathrm{MP2}} = E_{\mathrm{OS}} + E_{\mathrm{SS}}.
+\label{ch:13:eq:mp2-split}
+\end{equation}
+Grimme 发现，MP2 对同旋与反旋相关的误差并不相同；分别缩放可以显著改善\citep{grimme2003scsmp2}：
+\begin{equation}
+E_c^{\mathrm{SCS}}
+= c_{\mathrm{OS}}\,E_{\mathrm{OS}}
++ c_{\mathrm{SS}}\,E_{\mathrm{SS}}.
+\label{ch:13:eq:scs}
+\end{equation}
+SCS-MP2 取 $c_{\mathrm{OS}}=6/5$、$c_{\mathrm{SS}}=1/3$，即放大反旋、压低同旋。若取 $c_{\mathrm{SS}}=0$ 就得到自旋反平行缩放（spin-opposite scaling，SOS），只算 OS 项。B2PLYP 的 0.27 倍完整 MP2 等价于 $c_{\mathrm{OS}}=c_{\mathrm{SS}}=0.27$；PWPB95 则取 $c_{\mathrm{OS}}=1$、$c_{\mathrm{SS}}=0$，再乘式~\eqref{ch:13:eq:pwpb95} 的 $a_c=0.269$。式~\eqref{ch:13:eq:scs} 的意义不只是精度：丢掉 SS 项后，OS 项可以用 Laplace 变换把 $N^5$ 的求和降到更低的标度，这是 PWPB95 在大体系上比 B2PLYP 便宜的原因之一。
+
+\subsection{\texorpdfstring{$N^5$}{N5} 成本、AuxC 与精度}
+\label{ch:13:sec:cost}
+
+双杂化的额外成本来自 MP2 项。把 AO 基下的双电子积分变换到 MO 基需要四指数变换，形式标度为
+\begin{equation}
+T_{\mathrm{DH}}
+= c_3 N^3 + c_4 N^4 + c_5 N^5
+= \mathcal{O}(N^5).
+\label{ch:13:eq:dh-cost}
+\end{equation}
+式~\eqref{ch:13:eq:dh-cost} 中的 $N$ 是基函数数目；$N^5$ 项使双杂化比普通杂化贵一个数量级，也是它难以用于大规模筛选的根本原因。
+
+实际计算几乎从不做完整的四指数变换，而是用分辨率恒等式（resolution of the identity，RI）近似：
+\begin{equation}
+(pq|rs)
+\approx \sum_{P,Q} (pq|P)\,[\mathbf V^{-1}]_{PQ}\,(Q|rs),
+\qquad
+V_{PQ}=(P|Q),
+\label{ch:13:eq:ri}
+\end{equation}
+其中 $P,Q$ 是辅助基组指标。式~\eqref{ch:13:eq:ri} 把四中心积分分解为三中心与二中心积分，RI-MP2 的前因子因此大幅下降；SOS 与 Laplace 变换还可以进一步降低有效标度。但 RI 近似要求一个专门的\textbf{辅助相关基组}（auxiliary correlation basis，AuxC）：ORCA 中写作 \texttt{def2-TZVPP/C}，其中“/C”表示用于相关拟合的辅助基。双杂化计算必须显式给出这个基组；缺少 \texttt{def2-TZVPP/C} 时，RI-MP2 无法构造式~\eqref{ch:13:eq:ri} 所需的辅助积分，ORCA 会直接报错。辅助基越完备，RI 误差越小；不同 AuxC 也会带来小幅但可察觉的能量差异，因此比较不同双杂化的结果时应固定 AuxC\citep{weigend2006aux,hellweg2007aux}。
+
+精度上，双杂化通常比同级的全局杂化更接近参考值，尤其在反应能、弱相互作用与热化学上；代价是式~\eqref{ch:13:eq:dh-cost} 的 $N^5$ 标度与 AuxC 的额外管理。它并不是“越贵越准”的保证：参数是在特定训练集上拟合的，换到过渡金属、强关联或激发态时可能反而变差。
+
+\subsection{强相关体系的失效}
+\label{ch:13:sec:failure}
+
+双杂化的 MP2 项继承了 MP2 的根本弱点。式~\eqref{ch:13:eq:mp2-term} 的分母 $\Delta_{ij}^{ab}$ 在占据与虚轨道近简并时趋近于零，微扰展开发散；这正是第 4 章讨论过的强静态相关情形。拉伸化学键、双自由基、过渡金属配合物与部分激发态都具有这种近简并结构，双杂化无法靠“加一项 MP2”修复，反而可能因为高比例精确交换与自旋污染而恶化。此时正确的工具是第 7--8 章的多参考方法（CASSCF、CASPT2/NEVPT2、MRCI），而不是继续在单参考框架内调 $a_x$、$a_c$。
+
+此外，双杂化不是变分方法：式~\eqref{ch:13:eq:double-hybrid} 中的 MP2 项是微扰修正，总能量没有变分上界，不能用作“精确能量的上限”。它的尺寸一致性则来自 DFT 与 MP2 两项各自的尺寸一致性；只要 AuxC 与主基组在片段上保持一致，分离极限下总能量可加。
+
+% ---- 4. CH4 结果框 ----
+\begin{ch4box}
+CH$_4$/def2-TZVPP，ORCA 关键词 \texttt{! B2PLYP def2-TZVPP def2-TZVPP/C TightSCF}
+与 \texttt{! PWPB95 def2-TZVPP def2-TZVPP/C TightSCF}：
+\[
+\begin{gathered}
+E_{\mathrm{B2PLYP}} = -40.487287\ \mathrm{Eh},\qquad
+E_{\mathrm{PWPB95}} = -40.489598\ \mathrm{Eh},\\
+E_{\mathrm{CCSD(T)}} = -40.438598\ \mathrm{Eh}.
+\end{gathered}
+\]
+\[
+\begin{aligned}
+\Delta E_{\mathrm{B2PLYP}}
+&= \big(-40.487287 -(-40.438598)\big)\times 627.509474\\
+&= (-0.048689)\times 627.509474
+= -30.55\ \mathrm{kcal\cdot mol^{-1}}.
+\end{aligned}
+\]
+\[
+\begin{aligned}
+\Delta E_{\mathrm{PWPB95}}
+&= \big(-40.489598 -(-40.438598)\big)\times 627.509474\\
+&= (-0.051000)\times 627.509474
+= -32.00\ \mathrm{kcal\cdot mol^{-1}}.
+\end{aligned}
+\]
+用未舍入的 CSV 能量计算，精确值为 $\Delta E_{\mathrm{B2PLYP}}=-30.552877$、
+$\Delta E_{\mathrm{PWPB95}}=-32.003044$\,kcal·mol$^{-1}$。两个双杂化都比第 12 章的
+B3LYP（$-40.59$\,kcal·mol$^{-1}$）更接近 CCSD(T)，其中 B2PLYP 在该算例上比 PWPB95
+高约 1.45\,kcal·mol$^{-1}$。两者的 MP2 项都使用 \texttt{def2-TZVPP/C} 辅助基组；
+没有 AuxC，RI-MP2 无法进行。
+\end{ch4box}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{把双杂化当成“杂化 + HF 轨道上的 MP2”}：MP2 项必须在双杂化自洽场收敛的轨道上计算；用 HF 轨道会破坏式~\eqref{ch:13:eq:double-hybrid} 的自洽性，结果不可比。
+  \item \textbf{忘记 AuxC}：双杂化默认走 RI-MP2，必须显式给出 \texttt{def2-TZVPP/C}（或对应基组的 /C 辅助基）；缺少时 ORCA 直接报错，不会自动退回四指数 MP2。
+  \item \textbf{把双杂化用于强相关体系}：式~\eqref{ch:13:eq:mp2-term} 的分母近零时微扰发散；拉伸键、双自由基与强关联过渡金属应改用多参考方法。
+  \item \textbf{把双杂化当变分方法}：MP2 项无变分上界，总能量低于某个值不代表“更接近精确”；只能与同基组、同 AuxC 的参考值比较能量差。
+  \item \textbf{忽略色散校正}：B2PLYP 与 PWPB95 本身不含长程色散，非共价体系通常还要加 D3(BJ) 等经验校正。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+本章回答“把 MP2 装进 DFT 值不值”。双杂化的一般形式式~\eqref{ch:13:eq:double-hybrid} 在杂化交换之外，用 $a_c$ 倍的 MP2 相关替换 DFT 相关；B2PLYP 式~\eqref{ch:13:eq:b2plyp} 取 $a_x=0.53$、$a_c=0.27$，PWPB95 式~\eqref{ch:13:eq:pwpb95} 取 50\% 精确交换与 26.9\% 的 OS-PT2。MP2 项式~\eqref{ch:13:eq:mp2-term} 可按自旋拆成式~\eqref{ch:13:eq:mp2-split}，再用式~\eqref{ch:13:eq:scs} 做自旋分量缩放；RI 近似式~\eqref{ch:13:eq:ri} 让它可用 AuxC 加速，但形式成本仍是式~\eqref{ch:13:eq:dh-cost} 的 $\mathcal{O}(N^5)$。在 CH$_4$ 上，B2PLYP 与 PWPB95 的偏差分别约为 $-30.55$ 与 $-32.00$\,kcal·mol$^{-1}$，明显小于 B3LYP 的 $-40.59$\,kcal·mol$^{-1}$。但 $N^5$ 成本与强相关失效意味着双杂化仍不能做大规模筛选，也不能处理多组态体系。带着这个问题，我们进入第 14 章：xTB：如何把成本降到大规模筛选？

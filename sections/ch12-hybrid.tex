@@ -1,3 +1,188 @@
+% ============================================================
+% sections/ch12-hybrid.tex —— 第 12 章 杂化：精确交换能修正什么？
+% 页数配额：5 页（±1）。数值只取自 data/ch4_results.csv。
+% ============================================================
+
 \section{杂化：精确交换能修正什么？}
 \label{ch:12:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}meta-GGA 仍有 SIE、缺非局域相关。\\
+\textbf{本章为什么存在：}混入精确交换（全局或范围分离）可以部分抵消自相互作用，并修正交换势的渐近行为。\\
+\textbf{本章留下的新问题：}仍缺动态相关。
+\end{problemchain}
+
+% ---- 2. 方法卡片 ----
+\begin{methodcard}
+\textbf{方法}：杂化泛函（hybrid functional），代表 B3LYP 与 $\omega$B97M-V\quad
+\textbf{文献}：\citep{becke1993b3lyp,lee1988,adamo1999pbe0,mardirossian2016wb97mv}\\
+\textbf{核心近似}：用一部分精确（HF 型）交换替换半局域交换；$\omega$B97M-V 还使用范围分离与 VV10 非局域相关\\
+\textbf{关键方程}：式~\eqref{ch:12:eq:global-hybrid}\\
+\textbf{ORCA 关键词}：\texttt{! B3LYP def2-TZVPP TightSCF}；\texttt{! wB97M-V def2-TZVPP TightSCF}\\
+\textbf{成本标度}：$\mathcal{O}(N^4)$\quad
+\textbf{能否变分 / 尺寸一致}：是 / 是（精确交换使泛函依赖轨道，按广义 KS 处理）\\
+\textbf{典型失效}：强静态相关、SIE 只被部分消除、色散仍需 D3 等校正
+\end{methodcard}
+
+% ---- 3. 正文 ----
+\subsection{自相互作用误差（SIE）}
+\label{ch:12:sec:sie}
+
+第 9 章把 DFT 的全部近似压缩进交换相关泛函 $E_\xc[\rho]$，第 10--11 章逐级加入密度梯度与动能密度——从 PBE\citep{perdew1996pbe} 到 TPSS\citep{tao2003}——但半局域泛函始终只“看见”局部的密度信息。这种半局域性最直接的后果是\textbf{自相互作用误差}（self-interaction error，SIE）：一个电子与自身的库仑排斥没有被交换项完全抵消\citep{perdew1981sie}。
+
+考虑只含一个电子的密度 $\rho_1(\mathbf r)=\lvert\phi_1(\mathbf r)\rvert^2$。真实系统没有电子--电子相互作用，因此 Hartree 能必须被交换能精确抵消，相关能为零。对单电子密度，精确交换满足 $E_x^{\HF}[\rho_1]=-E_{\mathrm H}[\rho_1]$；任何近似泛函若做不到这一点，就留下非零的残余：
+\begin{equation}
+\Delta_{\mathrm{SIE}}[\rho_1]
+= E_{\mathrm H}[\rho_1] + E_\xc[\rho_1] \neq 0,
+\qquad
+E_{\mathrm H}[\rho_1]
+= \frac{1}{2}\iint
+\frac{\rho_1(\mathbf r)\,\rho_1(\mathbf r')}
+{\lvert\mathbf r-\mathbf r'\rvert}
+\,\dd\mathbf r\,\dd\mathbf r'.
+\label{ch:12:eq:sie}
+\end{equation}
+式~\eqref{ch:12:eq:sie} 是 SIE 的定义。对 LDA 与 GGA，$E_{\mathrm H}$ 中的自库仑项远大于近似的交换项，残余为正值；电子因此“讨厌自己”，倾向于把密度摊开。后果包括分数电荷能量偏离分段线性、电荷转移激发能低估、反应能垒偏低，以及自由基与过渡金属体系的自旋密度分布错误。
+
+精确交换能按定义抵消单电子的全部自库仑项。若在泛函中混入比例为 $a_x$ 的精确交换，则到一阶近似，残余 SIE 按同一比例缩小：
+\begin{equation}
+\Delta_{\mathrm{SIE}}^{\mathrm{hybrid}}(a_x)
+\approx (1-a_x)\,\Delta_{\mathrm{SIE}}^{\mathrm{DFT}}.
+\label{ch:12:eq:sie-hybrid}
+\end{equation}
+式~\eqref{ch:12:eq:sie-hybrid} 说明了杂化泛函“修正什么”：它并不是新的相关泛函，而是用非局域的精确交换替换掉一部分有自相互作用的半局域交换。需要强调，这里的“精确交换”是用当前（广义）KS 轨道计算的 HF 型交换能，而不是第 3 章在 HF 轨道上算出的交换能；轨道随泛函一起自洽优化。
+
+\subsection{全局杂化：B3LYP}
+\label{ch:12:sec:global}
+
+最简单的混合方式是在所有电子间距离上使用同一个精确交换比例，称为\textbf{全局杂化}（global hybrid）：
+\begin{equation}
+E_\xc
+= a_x E_x^{\HF}
++ (1-a_x)\,E_x^{\mathrm{DFT}}
++ E_c^{\mathrm{DFT}}.
+\label{ch:12:eq:global-hybrid}
+\end{equation}
+式~\eqref{ch:12:eq:global-hybrid} 中 $a_x$ 是精确交换分数，$E_x^{\mathrm{DFT}}$ 与 $E_c^{\mathrm{DFT}}$ 是半局域交换与相关。$a_x=0$ 退化为普通 GGA/meta-GGA，$a_x=1$ 则交换全部精确、相关仍用 DFT。由于精确交换是轨道泛函，式~\eqref{ch:12:eq:global-hybrid} 的能量不能写成密度的简单泛函；实际求解的是广义 Kohn--Sham（generalized KS，GKS）方程，交换势取轨道泛函的导数。
+
+B3LYP 是最著名的全局杂化\citep{becke1993b3lyp,lee1988}。它把 Becke 三参数交换与 LYP 相关组合起来：
+\begin{equation}
+E_\xc^{\mathrm{B3LYP}}
+= 0.20\,E_x^{\HF}
++ 0.80\,E_x^{\mathrm{LDA}}
++ 0.72\,\Delta E_x^{\mathrm{B88}}
++ 0.81\,E_c^{\mathrm{LYP}}
++ 0.19\,E_c^{\mathrm{VWN5}},
+\label{ch:12:eq:b3lyp}
+\end{equation}
+其中 $\Delta E_x^{\mathrm{B88}}=E_x^{\mathrm{B88}}-E_x^{\mathrm{LDA}}$ 是 B88 梯度修正，$E_c^{\mathrm{VWN5}}$ 是 VWN5 局域相关。式~\eqref{ch:12:eq:b3lyp} 的三个系数 $(0.20,0.72,0.81)$ 是 1993 年针对热化学数据库拟合的，精确交换分数 $a_x=0.20$ 并非从第一原理导出。PBE0 则取 $a_x=1/4$，这个分数可由微扰论论证，因而被视为“无参数”杂化\citep{adamo1999pbe0}。两者都只用一个全局比例，无法同时优化短程与长程行为：20\%--25\% 的精确交换足以缓解价区的 SIE，却不足以恢复 $r\to\infty$ 的 $-1/r$ 交换势。
+
+\subsection{范围分离杂化：\texorpdfstring{$\omega$B97M-V}{wB97M-V}}
+\label{ch:12:sec:rsh}
+
+要分别控制短程与长程，可把库仑算符按距离拆成两部分：
+\begin{equation}
+\frac{1}{r}
+= \frac{\operatorname{erf}(\omega r)}{r}
++ \frac{\operatorname{erfc}(\omega r)}{r},
+\label{ch:12:eq:range-separation}
+\end{equation}
+其中 $\operatorname{erf}(\omega r)/r$ 在长程趋于 $1/r$、在短程趋于有限值，是长程部分；$\operatorname{erfc}(\omega r)/r$ 在短程趋于 $1/r$、在长程指数衰减，是短程部分。$\omega$ 控制两部分交接的距离尺度，称为范围分离参数。把交换能按同一方式拆分，并在短程混入可调比例的精确交换、在长程使用 100\% 精确交换，就得到\textbf{范围分离杂化}（range-separated hybrid，RSH）：
+\begin{equation}
+E_x^{\mathrm{RSH}}
+= E_{x,\mathrm{SR}}^{\mathrm{DFT}}
++ a_{\mathrm{SR}}\,E_{x,\mathrm{SR}}^{\HF}
++ a_{\mathrm{LR}}\,E_{x,\mathrm{LR}}^{\HF}.
+\label{ch:12:eq:rsh-exchange}
+\end{equation}
+式~\eqref{ch:12:eq:rsh-exchange} 中 $E_{x,\mathrm{SR}}^{\mathrm{DFT}}$ 已包含短程半局域交换的剩余部分；长程系数通常取 $a_{\mathrm{LR}}=1$，以保证交换势的正确渐近行为。$\omega$B97M-V 是这一类的代表\citep{mardirossian2016wb97mv}：短程精确交换约 15\%、长程精确交换 100\%，范围分离参数 $\omega=0.3$\,bohr$^{-1}$，短程部分用 meta-GGA 交换（因此它同时继承第 11 章的 $\tau$ 与 $\alpha$ 信息）。
+
+范围分离带来的改进主要在长程：正确渐近的交换势使里德堡激发、电荷转移激发、极化率与阴离子束缚能明显改善；短程仍保留半局域交换，避免全局杂化在高密度区过度混合精确交换。代价是每个矩阵元都要分成短程与长程两部分，精确交换的构建更复杂，SCF 收敛也更困难。
+
+\subsection{VV10 非局域相关}
+\label{ch:12:sec:vv10}
+
+范围分离只修正交换，色散（van der Waals）相关仍不在半局域泛函中。$\omega$B97M-V 名字里的“V”指 VV10 非局域相关\citep{mardirossian2016wb97mv}，它把相关能写成密度对的双重积分：
+\begin{equation}
+E_c^{\mathrm{nl}}
+= \frac{1}{2}\iint
+\rho(\mathbf r)\,\rho(\mathbf r')\,
+K_{\mathrm{nl}}(\mathbf r,\mathbf r')\,
+\dd\mathbf r\,\dd\mathbf r'.
+\label{ch:12:eq:vv10}
+\end{equation}
+VV10 的核为
+\begin{equation}
+K_{\mathrm{nl}}(\mathbf r,\mathbf r')
+= -\frac{3}{2}\,
+\frac{1}{g(\mathbf r,\mathbf r')\,g(\mathbf r',\mathbf r)\,
+\big[g(\mathbf r,\mathbf r')+g(\mathbf r',\mathbf r)\big]},
+\qquad
+g(\mathbf r,\mathbf r')
+= \omega_0(\mathbf r)\,\lvert\mathbf r-\mathbf r'\rvert^2+\kappa(\mathbf r),
+\label{ch:12:eq:vv10-kernel}
+\end{equation}
+（原子单位）。$\omega_0$ 与 $\kappa$ 由局部密度、密度梯度与费米波矢构造，使核在长程按 $R^{-6}$ 衰减、在短程保持有限。式~\eqref{ch:12:eq:vv10} 不引入新的轨道，只依赖密度，因此可以自洽地并入 KS 循环；但双重积分需要对网格点对求和，成本高于普通半局域泛函。最终 $\omega$B97M-V 的相关能是 meta-GGA 同旋/反旋相关加上式~\eqref{ch:12:eq:vv10} 的非局域项，交换能则由式~\eqref{ch:12:eq:rsh-exchange} 给出。
+
+\subsection{杂化的成本与性能}
+\label{ch:12:sec:cost}
+
+全局杂化的额外成本来自精确交换：它需要四中心电子排斥积分并构造交换矩阵，形式标度为
+\begin{equation}
+T_{\mathrm{hybrid}}
+= c_3 N^3 + c_4 N^4
+= \mathcal{O}(N^4),
+\label{ch:12:eq:hybrid-cost}
+\end{equation}
+其中 $N$ 是基函数数目。范围分离把每个积分再拆成短程/长程两份，VV10 再加入网格对求和，因此 $\omega$B97M-V 的单步成本高于 B3LYP；但两者都仍是多项式标度，远低于第 13 章的双杂化。
+
+性能上，CH$_4$ 的结果见本章末结果框：B3LYP 与 $\omega$B97M-V 的总能量都低于 CCSD(T) 参考，$\omega$B97M-V 的偏差比 B3LYP 小约 6.5\,kcal·mol$^{-1}$。但 CH$_4$ 是单参考、无弱相互作用的分子，这个比较只说明该算例上的系统误差，不能外推为“$\omega$B97M-V 一律优于 B3LYP”。全局杂化在热化学与动力学上性价比很高，却仍缺色散，通常要加 D3 校正；范围分离杂化在电荷转移与激发态上更可靠，VV10 则补上了非共价相互作用。两者共同的盲区是强静态相关：多组态体系、拉伸键与双自由基仍需第 7--8 章的多参考方法。
+
+% ---- 4. CH4 结果框 ----
+\begin{ch4box}
+CH$_4$/def2-TZVPP，ORCA 关键词 \texttt{! B3LYP def2-TZVPP TightSCF} 与
+\texttt{! wB97M-V def2-TZVPP TightSCF}：
+\[
+\begin{gathered}
+E_{\mathrm{B3LYP}} = -40.503278\ \mathrm{Eh},\qquad
+E_{\omega\mathrm{B97M\text{-}V}} = -40.492948\ \mathrm{Eh},\\
+E_{\mathrm{CCSD(T)}} = -40.438598\ \mathrm{Eh}.
+\end{gathered}
+\]
+\[
+\begin{aligned}
+\Delta E_{\mathrm{B3LYP}}
+&= \big(-40.503278 -(-40.438598)\big)\times 627.509474\\
+&= (-0.064680)\times 627.509474
+= -40.59\ \mathrm{kcal\cdot mol^{-1}}.
+\end{aligned}
+\]
+\[
+\begin{aligned}
+\Delta E_{\omega\mathrm{B97M\text{-}V}}
+&= \big(-40.492948 -(-40.438598)\big)\times 627.509474\\
+&= (-0.054350)\times 627.509474
+= -34.11\ \mathrm{kcal\cdot mol^{-1}}.
+\end{aligned}
+\]
+用未舍入的 CSV 能量计算，精确值为 $\Delta E_{\mathrm{B3LYP}}=-40.587188$、
+$\Delta E_{\omega\mathrm{B97M\text{-}V}}=-34.105476$\,kcal·mol$^{-1}$。
+$\omega$B97M-V 同时使用范围分离交换与 VV10 非局域相关；在 CH$_4$ 上 VV10 的贡献很小，
+其优势主要来自交换与短程相关的改进。两个总能量都低于参考，说明“更高梯级”不等于
+“绝对能量更接近”。
+\end{ch4box}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{把精确交换分数当作精度旋钮}：$a_x$ 不是越大越好。B3LYP 的 20\% 与 PBE0 的 25\% 来自不同的构造逻辑；盲目提高 $a_x$ 会破坏短程相关、加剧自旋污染，并让 SCF 更难收敛。
+  \item \textbf{把 $\omega$B97M-V 当成“B3LYP + 色散”}：范围分离交换、meta-GGA 短程部分与 VV10 非局域相关是三个独立成分；VV10 不是 D3 型经验校正，而是自洽进入 KS 循环的密度泛函。
+  \item \textbf{直接比较不同泛函的总能量}：不同泛函对动能、交换、相关的划分不同，总能量绝对值不可比；只能比较同一泛函下的能量差，或按式~\eqref{ch:12:eq:global-hybrid} 的构造分析误差来源。
+  \item \textbf{指望杂化修好强静态相关}：精确交换只缓解 SIE，不产生多参考波函数；拉伸键、双自由基与强关联过渡金属体系仍须用第 7--8 章的方法。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+本章的主线是“用精确交换替换半局域交换”。SIE 的定义式~\eqref{ch:12:eq:sie} 表明单电子密度下 Hartree 与交换必须精确抵消；全局杂化式~\eqref{ch:12:eq:global-hybrid} 按比例混入精确交换，把残余 SIE 近似压到 $(1-a_x)$ 倍（式~\eqref{ch:12:eq:sie-hybrid}），B3LYP 式~\eqref{ch:12:eq:b3lyp} 是其最常用的实现。范围分离式~\eqref{ch:12:eq:range-separation} 与式~\eqref{ch:12:eq:rsh-exchange} 让短程与长程各用不同比例，$\omega$B97M-V 由此获得正确的长程交换势；VV10 式~\eqref{ch:12:eq:vv10}、式~\eqref{ch:12:eq:vv10-kernel} 再用非局域核补上色散。代价是式~\eqref{ch:12:eq:hybrid-cost} 的 $\mathcal{O}(N^4)$ 成本。可是，精确交换只改善了交换与 SIE，半局域相关仍然缺动态相关——电子瞬时避让带来的那部分能量并没有被杂化补上。带着这个问题，我们进入第 13 章：双杂化：把 MP2 装进 DFT 值不值？
