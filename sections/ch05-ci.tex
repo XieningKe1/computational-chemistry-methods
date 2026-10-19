@@ -1,3 +1,225 @@
+% ============================================================
+% sections/ch05-ci.tex —— 第 5 章 CI：能不能系统地加激发组态？
+% 页数配额：6 页（±1）。数值只取自 data/ch4_results.csv。
+% ============================================================
+
 \section{CI：能不能系统地加激发组态？}
 \label{ch:05:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}MP2 依赖单参考，参考态差时发散、非变分。\\
+\textbf{本章为什么存在：}把波函数写成激发组态的行列式线性组合，用变分原理系统地加入相关。\\
+\textbf{本章留下的新问题：}截断 CI 不尺寸一致。
+\end{problemchain}
+
+% ---- 2. 方法卡片 ----
+\begin{methodcard}
+\textbf{方法}：组态相互作用（configuration interaction，CI），以 CISD 为代表\quad
+\textbf{文献}：\citep{knowles1988,szabo1996,helgaker2000}\\
+\textbf{核心近似}：固定 HF 轨道，把波函数在行列式基上展开，并按激发阶数截断\\
+\textbf{关键方程}：式~\eqref{ch:05:eq:ci-expansion}（CI 展开）\\
+\textbf{ORCA 关键词}：\texttt{! CISD def2-TZVPP TightSCF}\\
+\textbf{成本标度}：$\mathcal{O}(N^6)$（CISD）\quad
+\textbf{能否变分 / 尺寸一致}：是 / 否\\
+\textbf{典型失效}：截断 CI 的尺寸不一致、相关能收敛慢、单参考限制
+\end{methodcard}
+
+% ---- 3. 正文 ----
+\subsection{CI 波函数与激发算子}
+\label{ch:05:sec:ci-wavefunction}
+
+第 2 章式~\eqref{ch:02:eq:fci-expansion} 已经把精确波函数写成全部斯莱特行列式的线性组合。CI 方法直接使用这个展开，但把系数当作变分参数\citep{szabo1996,helgaker2000}：
+\begin{equation}
+\ket{\Psi_{\mathrm{CI}}}
+= \sum_I c_I \ket{\Phi_I}
+= \Big(1+\op{C}\Big)\ket{\Phi_0},
+\label{ch:05:eq:ci-expansion}
+\end{equation}
+其中 $I$ 遍历所选的行列式/组态，$\Phi_0$ 是 HF 基态行列式，$c_I$ 是待优化的组态系数。式~\eqref{ch:05:eq:ci-expansion} 的第二行把"相对 $\Phi_0$ 的激发"显式写成激发算子 $\op{C}$ 作用在参考态上。与 MP2 不同，这里没有微扰展开，也没有能量分母：所有组态系数在同一个变分问题里同时确定。
+
+把 $\op{C}$ 按激发阶数展开，可以看清 CI 的层级结构：
+\begin{equation}
+\op{C}
+= \sum_{i,a} c_i^a\,\op{a}_a^\dagger \op{a}_i
++ \frac{1}{4}\sum_{i,j,a,b} c_{ij}^{ab}\,
+  \op{a}_a^\dagger \op{a}_b^\dagger \op{a}_j \op{a}_i
++ \cdots ,
+\label{ch:05:eq:excitation-operator}
+\end{equation}
+其中 $\op{a}_p^\dagger$ 与 $\op{a}_p$ 分别是自旋轨道 $p$ 的产生与湮灭算符。第一项把一个电子从占据轨道 $i$ 提到虚轨道 $a$（单激发），第二项同时提升两个电子（双激发）；因子 $1/4$ 与 $1/(n!)^2$ 保证每个行列式只被数一次。式~\eqref{ch:05:eq:excitation-operator} 的省略号代表三激发、四激发直至 $N$ 激发。
+
+实际计算必须截断。最常用的是 CISD（ singles and doubles），只保留单、双激发：
+\begin{equation}
+\ket{\Psi_{\mathrm{CISD}}}
+= c_0\ket{\Phi_0}
++ \sum_{i,a} c_i^a \ket{\Phi_i^a}
++ \sum_{i<j}\sum_{a<b} c_{ij}^{ab}\ket{\Phi_{ij}^{ab}} .
+\label{ch:05:eq:cisd}
+\end{equation}
+这里 $\Phi_i^a$ 与 $\Phi_{ij}^{ab}$ 分别表示相对 $\Phi_0$ 的单、双激发行列式。式~\eqref{ch:05:eq:cisd} 中双激发求和限制 $i<j$、$a<b$，使每个行列式只出现一次；若采用式~\eqref{ch:05:eq:excitation-operator} 的算符写法，则用 $1/4$ 因子达到同一目的。求解时常用中间归一化 $c_0=1$，但变分能量仍按归一化波函数计算。
+
+实际实现通常直接使用行列式而非"组态"作为基。对闭壳层单重态，也可以把行列式组合成自旋适配的组态函数（configuration state function，CSF），使矩阵按自旋量子数分块、降低维度；两者的激发空间相同，能量本征值也相同，只是基的线性组合不同。本书为与 Slater--Condon 规则和后续 CC 的算符语言保持一致，统一采用行列式基。这样一来，$\alpha$ 与 $\beta$ 激发的组合会自动包含在式~\eqref{ch:05:eq:cisd} 的双激发求和中，不需要额外规定自旋耦合方式。
+
+\subsection{FCI、CIS 与 CISD}
+\label{ch:05:sec:truncation}
+
+若式~\eqref{ch:05:eq:ci-expansion} 不截断，就得到完全组态相互作用（full configuration interaction，FCI）。在给定基组内，FCI 是精确解：它包含了所有可能的电子相关，因此常被用作检验近似方法的基准\citep{knowles1988,shavitt2009}。对 $K$ 个空间轨道、$N_\alpha$ 个 $\alpha$ 电子与 $N_\beta$ 个 $\beta$ 电子，闭壳层单重态的 FCI 行列式数目为
+\begin{equation}
+N_{\mathrm{FCI}}
+= \binom{K}{N_\alpha}\binom{K}{N_\beta},
+\label{ch:05:eq:fci-dimension}
+\end{equation}
+它随 $K$ 的组合式增长，而非多项式增长。式~\eqref{ch:05:eq:fci-dimension} 是 FCI 只能用于小体系的根本原因。
+
+在 FCI 与 HF 之间是一族截断 CI：
+\begin{itemize}
+  \item \textbf{CIS}（configuration interaction singles）：只含单激发。对闭壳层基态，Brillouin 定理给出 $\bracket{\Phi_0|\op{H}|\Phi_i^a}=0$，单激发不与 HF 混合，故 CIS 基态能量等于 HF；CIS 主要用于激发态和光谱。
+  \item \textbf{CISD}：含单、双激发，是基态相关能最常用的 CI 截断。其成本标度为 $\mathcal{O}(N^6)$，能回收平衡构型附近的大部分动态相关。
+  \item \textbf{CISDT、CISDTQ 等}：逐级加入三激发、四激发，能量单调下降（变分性），成本迅速上升，最终收敛到 FCI。
+\end{itemize}
+截断 CI 的能量随激发阶数单调降低，这是变分原理的直接结果；但"加更多激发"并不保证误差以某种固定比例缩小，尤其是在体系变大时（见 5.5 节）。表~\ref{ch:05:tab:hierarchy} 汇总了这一族方法的规模与性质。需要强调的是，表中的"成本"只计矩阵--向量积的主导标度；实际计算还要做原子轨道到分子轨道的积分变换（CISD 约 $\mathcal{O}(N^5)$）和双激发振幅的存储（$\mathcal{O}(N^4)$），后者常是内存瓶颈。
+
+\begin{table}[t]
+\centering
+\small
+\caption{截断 CI 的层级：激发空间、主导成本与尺寸行为（与第 2 章表~\ref{ch:02:tab:properties} 一致）。}\label{ch:05:tab:hierarchy}
+\begin{tabular}{@{}llllc@{}}
+\toprule
+方法 & 保留激发 & 相对 $\Phi_0$ 的组态 & 主导成本 & 尺寸一致 \\
+\midrule
+CIS & 单 & $\mathcal{O}(N^2)$ & $\mathcal{O}(N^4)$ & 否 \\
+CISD & 单、双 & $\mathcal{O}(N^4)$ & $\mathcal{O}(N^6)$ & 否 \\
+CISDT & 单、双、三 & $\mathcal{O}(N^6)$ & $\mathcal{O}(N^8)$ & 否 \\
+FCI & 全部 & 组合数（式~\eqref{ch:05:eq:fci-dimension}） & 指数增长 & 是 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+表中的"尺寸一致"一列全部为"否"（FCI 除外），这并不是因为截断得不够高：只要在有限激发阶数处截断，就会丢失某个阶数的断开激发。把激发阶数从二提到三、四，只能把误差推后，不能改变标度行为。
+
+\subsection{Slater--Condon 规则}
+\label{ch:05:sec:slater-condon}
+
+CI 矩阵元由 Slater--Condon 规则给出。由于电子哈密顿算符只含单体与两体项，两个行列式若相差三个及以上自旋轨道，矩阵元严格为零。对角元就是该行列式自身的能量：
+\begin{equation}
+\bracket{\Phi_I|\op{H}|\Phi_I}
+= \sum_{i\in \mathrm{occ}(I)} h_{ii}
++ \frac{1}{2}\sum_{i,j\in \mathrm{occ}(I)}
+  \big[(ii|jj)-(ij|ji)\big],
+\label{ch:05:eq:slater-diagonal}
+\end{equation}
+其中 $h_{ii}$ 是单电子积分，$(ii|jj)$ 与 $(ij|ji)$ 分别是库仑与交换积分，求和遍历 $\Phi_I$ 的全部占据自旋轨道。式~\eqref{ch:05:eq:slater-diagonal} 与第 2 章式~\eqref{ch:02:eq:hf-energy} 形式相同，但这里的占据集合属于任意行列式，而不一定是 HF 基态。
+
+非对角元只在两个行列式相差一个或两个自旋轨道时非零：
+\begin{equation}
+\bracket{\Phi_I|\op{H}|\Phi_J}
+=
+\begin{cases}
+f_{ia}, & \text{相差一个自旋轨道 }(i\to a),\\[2pt]
+\pm\big[(ij|ab)-(ib|ja)\big], & \text{相差两个自旋轨道 }(i,j\to a,b),\\[2pt]
+0, & \text{相差三个及以上},
+\end{cases}
+\label{ch:05:eq:slater-offdiagonal}
+\end{equation}
+其中 $f_{ia}=h_{ia}+\sum_j[(ia|jj)-(ij|ja)]$ 是 Fock 矩阵的非对角元；$\pm$ 号由把两个行列式排成最大重合顺序所需的置换次数决定。式~\eqref{ch:05:eq:slater-offdiagonal} 说明：H 只直接耦合相差至多两个轨道的行列式，三激发与四激发通过双激发间接进入。这正是 CISD 矩阵稀疏、可以用迭代方法对角化的原因。
+
+\subsection{CI 矩阵与 Davidson 对角化}
+\label{ch:05:sec:davidson}
+
+把式~\eqref{ch:05:eq:ci-expansion} 代入定态薛定谔方程并对每个组态投影，得到 CI 本征值问题
+\begin{equation}
+\op{H}\mathbf{c} = E\,\mathbf{c},
+\qquad
+H_{IJ}=\bracket{\Phi_I|\op{H}|\Phi_J},
+\label{ch:05:eq:ci-eigen}
+\end{equation}
+其中 $\mathbf{c}=(c_0,c_1,\ldots)^{\mathsf T}$ 是组态系数向量。由变分原理，任一归一化 $\mathbf{c}$ 给出的能量是基态能量的上界：
+\begin{equation}
+E_{\mathrm{CI}}(\mathbf{c})
+= \frac{\mathbf{c}^\dagger \mathbf{H}\mathbf{c}}
+       {\mathbf{c}^\dagger \mathbf{c}}
+\ge E_0 .
+\label{ch:05:eq:ci-variational}
+\end{equation}
+式~\eqref{ch:05:eq:ci-variational} 是 CI 相对 MP2 的优点：能量不会低于真实基态，截断只会使它偏高。
+
+CISD 的矩阵维度远超直接对角化能处理的范围，直接对角化不现实。Davidson 方法只构造一个很小的 Krylov 子空间，在其中求解式~\eqref{ch:05:eq:ci-eigen} 的低端本征对\citep{helgaker2000}。每步先算残差，再用对角元做预条件：
+\begin{equation}
+\mathbf{r}^{(k)} = \mathbf{H}\mathbf{c}^{(k)} - E^{(k)}\mathbf{c}^{(k)},
+\qquad
+\mathbf{d}^{(k)} = -\big(\mathbf{D}-E^{(k)}\mathbf{I}\big)^{-1}\mathbf{r}^{(k)},
+\label{ch:05:eq:davidson}
+\end{equation}
+其中 $\mathbf{D}$ 是 $\mathbf{H}$ 的对角部分，$E^{(k)}=\mathbf{c}^{(k)\dagger}\mathbf{H}\mathbf{c}^{(k)}$。把 $\mathbf{d}^{(k)}$ 正交化后加入子空间，投影得到新的 $\mathbf{c}^{(k+1)}$；子空间通常只需远小于全空间的维数即可收敛到最低本征值。式~\eqref{ch:05:eq:davidson} 的关键成本是每步的矩阵--向量积 $\mathbf{H}\mathbf{c}$：对 CISD 它是 $\mathcal{O}(N^6)$，与一次 MP2 同阶，但需要迭代多次。
+
+Davidson 方法只解决"如何对角化"，不改变 CISD 的截断误差。实践中常在其后加一个廉价的微扰校正，用基态在参考态上的权重估计缺失的高阶激发：
+\begin{equation}
+E_{\mathrm{CISD}+Q}
+= E_{\mathrm{CISD}}
++ \Big(1-\sum_{I\ne 0}|c_I|^2\Big)
+  \big(E_{\mathrm{CISD}}-E_\HF\big).
+\label{ch:05:eq:davidson-correction}
+\end{equation}
+式~\eqref{ch:05:eq:davidson-correction} 称为 Davidson 校正（$+Q$）。当 $\sum_{I\ne0}|c_I|^2$ 较小、波函数接近单参考时，它给出合理的改进；但当截断严重或体系变大时，$1-\sum|c_I|^2$ 本身不再可靠，式~\eqref{ch:05:eq:davidson-correction} 既不能恢复严格的尺寸一致性，也破坏了变分性。因此 $+Q$ 只能作为诊断和补救，不能替代尺寸一致的方法。
+
+\subsection{尺寸一致性问题：CISD 的致命缺陷}
+\label{ch:05:sec:size-consistency}
+
+第 2 章式~\eqref{ch:02:eq:size-consistency} 要求：两个不相互作用片段 $A$、$B$ 在 $R\to\infty$ 时的能量等于片段能量之和。FCI 满足这个要求，因为它的波函数可以严格因子化。CISD 不满足，原因可以一步看穿。
+
+设 $A$、$B$ 相距无穷远，各自的精确波函数含单、双激发。超体系 $AB$ 的精确波函数是乘积：
+\begin{equation}
+\begin{split}
+\ket{\Psi_{AB}}
+&= \ket{\Psi_A}\ket{\Psi_B}\\
+&= \Big(c_0^A\ket{\Phi_0^A}
+  + \sum_{i,a} c_i^{a,A}\ket{\Phi_i^a}^A
+  + \sum_{i<j,a<b} c_{ij}^{ab,A}\ket{\Phi_{ij}^{ab}}^A\Big)\\
+&\quad\otimes
+\Big(c_0^B\ket{\Phi_0^B}
+  + \sum_{k,c} c_k^{c,B}\ket{\Phi_k^c}^B
+  + \sum_{k<l,c<d} c_{kl}^{cd,B}\ket{\Phi_{kl}^{cd}}^B\Big).
+\end{split}
+\label{ch:05:eq:product-wavefunction}
+\end{equation}
+展开式~\eqref{ch:05:eq:product-wavefunction} 后，交叉项 $c_{ij}^{ab,A}c_{kl}^{cd,B}$ 表示"$A$ 上的一对双激发同时配上 $B$ 上的一对双激发"。在超体系 $AB$ 中，这是\textbf{四激发}（四个电子同时被提升），因为每个片段贡献两个激发。CISD 的组态空间只到双激发，式~\eqref{ch:05:eq:cisd} 中根本没有这个行列式。因此 CISD 波函数无法表示式~\eqref{ch:05:eq:product-wavefunction} 的乘积形式，能量也就不可能严格可加：
+\begin{equation}
+E_{\mathrm{CISD}}(AB;R\to\infty)
+\ne E_{\mathrm{CISD}}(A)+E_{\mathrm{CISD}}(B).
+\label{ch:05:eq:size-consistency-failure}
+\end{equation}
+式~\eqref{ch:05:eq:size-consistency-failure} 的偏差不是数值噪声，而是随片段数目增长的系统性误差：每增加一个片段，就多出一批缺失的"断开四激发"（disconnected quadruples）。换句话说，CISD 对每个片段的描述是合理的，但它无法把两个片段的双激发"相乘"。变分性也救不了这一点：式~\eqref{ch:05:eq:ci-variational} 只保证能量是上界，不保证上界在分离极限下可加。
+
+把同样的论证推广到 $n$ 个片段 $A_1,\ldots,A_n$，缺失项按片段对计数：
+\begin{equation}
+E_{\mathrm{CISD}}(A_1\cdots A_n)
+- \sum_{p=1}^{n}E_{\mathrm{CISD}}(A_p)
+= -\sum_{p<q}\Delta_{pq}+\cdots,
+\label{ch:05:eq:pair-error}
+\end{equation}
+其中 $\Delta_{pq}>0$ 是片段 $p$、$q$ 同时发生双激发时被截掉的关联贡献，省略号代表更高阶的断开项。式~\eqref{ch:05:eq:pair-error} 右端的求和有 $n(n-1)/2$ 项，因此误差随片段数二次增长，而能量本身只应线性增长。这正是"尺寸广延性"被破坏的定量含义：即使每个 $\Delta_{pq}$ 很小，片段一多，误差也会累积到与化学能同量级。对只有一个分子的 CH$_4$ 算例，式~\eqref{ch:05:eq:pair-error} 没有直接的片段对，但同样的缺失会表现为相关能回收不足——CISD 的 $+9.99$\,kcal·mol$^{-1}$ 偏差（见下方算例框）就是截断与尺寸行为的混合结果。
+
+这个缺陷直接污染两类计算。第一，反应能：若反应物和产物包含不同数目的独立电子对，CISD 误差不能相消。第二，弱相互作用与键断裂：拉伸时片段近似独立，缺失的断开激发使相互作用能被严重高估。Davidson 校正（$+Q$，式~\eqref{ch:05:eq:davidson-correction}）用微扰方式估计缺失的四激发，能缓解但不能消除尺寸不一致；真正的修复需要一种天然包含断开激发的拟设，这就是下一章的耦合簇。
+
+% ---- 4. CH4 结果框 ----
+\begin{ch4box}
+CH$_4$/def2-TZVPP：$E_{\mathrm{CISD}} = -40.422685$\,Eh
+（CSV 精确值 $-40.422684814182$\,Eh）；
+$\Delta E = +9.99$\,kcal·mol$^{-1}$（相对 CCSD(T) 的 $-40.438598$\,Eh）。
+CISD 是变分方法（能量为 FCI 上界），但不是尺寸一致方法；这个 $+9.99$\,kcal·mol$^{-1}$ 同时包含截断误差与尺寸不一致误差，不能全部归因于"激发阶数不够"。
+\end{ch4box}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{认为 CISD 固定恢复一定比例的相关能}：截断 CI 的相关能回收率随体系增大而下降；对单个小分子标定出的比例不能外推到反应能或大体系。
+  \item \textbf{把变分性当成尺寸一致性}：CISD 同时"变分"且"不尺寸一致"（第 2 章表~\ref{ch:02:tab:properties}）；变分只说明能量在上界一侧，不说明分离极限可加。
+  \item \textbf{用截断 CI 计算键断裂或反应能}：式~\eqref{ch:05:eq:size-consistency-failure} 的误差会进入能量差；此类问题应使用尺寸一致的 CC 或多参考方法。
+  \item \textbf{把 Davidson 校正当作严格修复}：$+Q$ 只是微扰估计，不能恢复所有断开激发，也不保持严格的变分性。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+CI 把波函数写成激发组态式~\eqref{ch:05:eq:ci-expansion} 的线性组合，用变分原理同时优化所有系数；FCI 在基组内精确，但行列式数目按式~\eqref{ch:05:eq:fci-dimension} 组合爆炸。CISD 只保留单、双激发，矩阵元由 Slater--Condon 规则式~\eqref{ch:05:eq:slater-diagonal}--\eqref{ch:05:eq:slater-offdiagonal} 给出，本征问题式~\eqref{ch:05:eq:ci-eigen} 用 Davidson 迭代求解。它的优点是变分（式~\eqref{ch:05:eq:ci-variational}），致命缺点是尺寸不一致：式~\eqref{ch:05:eq:product-wavefunction} 中两个片段双激发的乘积在超体系里是四激发，被 CISD 截掉，于是式~\eqref{ch:05:eq:size-consistency-failure} 成立。能不能设计一种拟设，让这些"断开激发"自动出现？带着这个问题，我们进入第 6 章：CC：如何修复截断 CI 的尺寸一致性？

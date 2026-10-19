@@ -1,3 +1,249 @@
+% ============================================================
+% sections/ch06-cc.tex —— 第 6 章 CC：如何修复截断 CI 的尺寸一致性？
+% 页数配额：6 页（±1）。数值只取自 data/ch4_results.csv。
+% ============================================================
+
 \section{CC：如何修复截断 CI 的尺寸一致性？}
 \label{ch:06:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}截断 CI 不尺寸一致。\\
+\textbf{本章为什么存在：}指数拟设把相连簇求和到无穷阶，自动包含断开激发，恢复尺寸广延性。\\
+\textbf{本章留下的新问题：}强静态相关下失效。
+\end{problemchain}
+
+% ---- 2. 方法卡片 ----
+\begin{methodcard}
+\textbf{方法}：耦合簇（coupled cluster，CC），以 CCSD(T) 为代表\quad
+\textbf{文献}：\citep{cizek1966,purvis1982,raghavachari1989,bartlett2007cc}\\
+\textbf{核心近似}：单参考行列式 + 指数拟设 + 微扰三激发\\
+\textbf{关键方程}：式~\eqref{ch:06:eq:cc-energy}（CCSD 能量）\\
+\textbf{ORCA 关键词}：\texttt{! CCSD(T) def2-TZVPP TightSCF}\\
+\textbf{成本标度}：$\mathcal{O}(N^7)$（CCSD(T)）\quad
+\textbf{能否变分 / 尺寸一致}：否 / 是\\
+\textbf{典型失效}：强静态相关、多参考体系、键断裂
+\end{methodcard}
+
+% ---- 3. 正文 ----
+\subsection{指数拟设与相连簇}
+\label{ch:06:sec:ansatz}
+
+第 5 章式~\eqref{ch:05:eq:size-consistency-failure} 暴露了截断 CI 的病根：波函数是行列式的\textbf{线性}组合，截到双激发就丢掉了两个片段双激发的乘积。耦合簇换一种写法，把激发算符放进指数里\citep{cizek1966,bartlett2007cc}：
+\begin{equation}
+\ket{\Psi_{\mathrm{CC}}}
+= \ee^{\op{T}}\ket{\Phi_0},
+\qquad
+\op{T} = \op{T}_1+\op{T}_2+\cdots+\op{T}_N,
+\label{ch:06:eq:cc-wavefunction}
+\end{equation}
+其中 $\op{T}_n$ 是 $n$ 重激发簇算符，$N$ 是电子数。$\op{T}$ 的每个分量都带待定振幅，但它们不再线性地乘在行列式前，而是通过指数相互组合：
+\begin{equation}
+\ee^{\op{T}}
+= 1 + \op{T} + \frac{1}{2}\op{T}^2 + \frac{1}{6}\op{T}^3 + \cdots .
+\label{ch:06:eq:exponential}
+\end{equation}
+式~\eqref{ch:06:eq:exponential} 是 CC 与 CI 的分水岭。把 $\op{T}=\op{T}_1+\op{T}_2+\cdots$ 代入，$\frac12\op{T}_2^2$ 给出"两个双激发之积"——在超体系里正是第 5 章缺失的四激发。CI 的系数 $c_{ijkl}^{abcd}$ 必须作为独立参数单独优化；CC 则用 $\frac12 t_{ij}^{ab}t_{kl}^{cd}$ 这样的\textbf{断开}（disconnected）乘积自动生成它。指数因此把相连簇（connected cluster）求和到无穷阶。
+
+一般的 $n$ 重簇算符写成
+\begin{equation}
+\op{T}_n
+= \frac{1}{(n!)^2}
+\sum_{i_1,\ldots,i_n}\sum_{a_1,\ldots,a_n}
+t_{i_1\ldots i_n}^{a_1\ldots a_n}\,
+\op{a}_{a_1}^\dagger\cdots\op{a}_{a_n}^\dagger
+\op{a}_{i_n}\cdots\op{a}_{i_1},
+\label{ch:06:eq:cluster-general}
+\end{equation}
+其中 $t_{i_1\ldots i_n}^{a_1\ldots a_n}$ 是 $n$ 重激发振幅，因子 $1/(n!)^2$ 同时消除占据与虚轨道的重复计数。式~\eqref{ch:06:eq:cluster-general} 表明：CC 的参数数目与 CI 同阶，但参数的组合方式不同，正是这一点决定了尺寸行为。
+
+\subsection{$T_1$ 与 $T_2$ 算符}
+\label{ch:06:sec:t1t2}
+
+在 CCSD 中只保留单、双簇算符。单激发算符为
+\begin{equation}
+\op{T}_1 = \sum_{i,a} t_i^a\,\op{a}_a^\dagger \op{a}_i,
+\label{ch:06:eq:t1}
+\end{equation}
+双激发算符为
+\begin{equation}
+\op{T}_2 = \frac{1}{4}\sum_{i,j,a,b} t_{ij}^{ab}\,
+\op{a}_a^\dagger \op{a}_b^\dagger \op{a}_j \op{a}_i .
+\label{ch:06:eq:t2}
+\end{equation}
+式~\eqref{ch:06:eq:t1} 的 $t_i^a$ 描述轨道弛豫（HF 轨道在相关存在下的再混合）；式~\eqref{ch:06:eq:t2} 的 $t_{ij}^{ab}$ 描述电子对的瞬时回避，是动态相关的主要载体。$1/4$ 因子与式~\eqref{ch:05:eq:excitation-operator} 相同：四个指标各自独立求和时，每个双激发被数了四次。
+
+CC 的中间归一化是自动的：由于 $\op{T}$ 至少含一个激发，$\braket{\Phi_0|\op{T}|\Phi_0}=0$，于是 $\bracket{\Phi_0|\ee^{\op{T}}|\Phi_0}=1$。因此式~\eqref{ch:06:eq:cc-wavefunction} 的波函数不需要额外除以范数，能量公式~\eqref{ch:06:eq:cc-energy} 也不出现分母。代价是 $\ee^{\op{T}}$ 不是幺正算符，波函数在激发流形上的分量可以任意大；振幅必须由方程式~\eqref{ch:06:eq:cc-amplitude} 定出，而不能像 CI 那样由本征值问题自动归一。
+
+单激发振幅还有一个常用的诊断用途。定义
+\begin{equation}
+T_1 = \sqrt{\frac{1}{N}\sum_{i,a}\big|t_i^a\big|^2},
+\label{ch:06:eq:t1-diagnostic}
+\end{equation}
+其中 $N$ 是电子数。式~\eqref{ch:06:eq:t1-diagnostic} 称为 $T_1$ 诊断：参考态越接近单参考，$t_i^a$ 越小，$T_1$ 越小；若 $T_1$ 明显偏大，说明 HF 行列式不是好的零阶描述，CCSD(T) 的结果需要谨慎对待。$T_1$ 不是严格的判据，但它是判断"能否安全使用单参考 CC"的第一道检查。
+
+在 CCSD 中，$\op{T}_3,\op{T}_4,\ldots$ 被设为零，但它们的\textbf{断开}组合仍通过 $\ee^{\op{T}_1+\op{T}_2}$ 出现。例如 $\frac12\op{T}_2^2$ 含四激发，$\op{T}_1\op{T}_2$ 含三激发。这就是 CCSD 与 CISD 参数相同、能量却尺寸一致的原因：CCSD 的波函数不是"只有单、双激发"，而是"只有相连的单、双激发，断开部分由指数生成"。
+
+\subsection{相似变换 Hamiltonian}
+\label{ch:06:sec:similarity}
+
+把式~\eqref{ch:06:eq:cc-wavefunction} 代入电子薛定谔方程，左乘 $\ee^{-\op{T}}$，得到
+\begin{equation}
+\bar{H}\,\ket{\Phi_0} = E\,\ket{\Phi_0},
+\qquad
+\bar{H} = \ee^{-\op{T}}\op{H}\,\ee^{\op{T}},
+\label{ch:06:eq:similarity}
+\end{equation}
+其中 $\bar{H}$ 称为相似变换 Hamiltonian。注意 $\ee^{-\op{T}}\ee^{\op{T}}=1$，所以式~\eqref{ch:06:eq:similarity} 与原始方程等价；但变换本身不是幺正的（$\op{T}$ 不是反厄米算符），因此 $\bar{H}$ 非厄米，CC 能量没有变分上界。
+
+利用 Baker--Campbell--Hausdorff 展开，
+\begin{equation}
+\bar{H}
+= \op{H} + [\op{H},\op{T}]
++ \frac{1}{2}\big[[\op{H},\op{T}],\op{T}\big]
++ \frac{1}{6}\big[[[\op{H},\op{T}],\op{T}],\op{T}\big]
++ \frac{1}{24}\big[[[[\op{H},\op{T}],\op{T}],\op{T}],\op{T}\big],
+\label{ch:06:eq:bch}
+\end{equation}
+展开在四个对易子后严格终止：$\op{H}$ 最多是两体算符，每与 $\op{T}$ 对易一次就多湮灭一个粒子，最多累积到四体项。式~\eqref{ch:06:eq:bch} 是 CC 可行性的关键——它不是无穷级数。更重要的是，$\bar{H}$ 中只保留\textbf{相连}（connected）项，这一"相连性"稍后将直接给出尺寸广延性（6.7 节）。
+
+\subsection{CCSD 能量与振幅方程}
+\label{ch:06:sec:ccsd}
+
+能量由式~\eqref{ch:06:eq:similarity} 左乘 $\bra{\Phi_0}$ 得到：
+\begin{equation}
+E_{\mathrm{CCSD}}
+= \bracket{\Phi_0|\bar{H}|\Phi_0}
+= E_\HF + \sum_{i,a} f_{ia} t_i^a
++ \frac{1}{4}\sum_{i,j,a,b}
+\big[(ij|ab)-(ij|ba)\big]
+\big(t_{ij}^{ab}+2t_i^a t_j^b\big).
+\label{ch:06:eq:cc-energy}
+\end{equation}
+式~\eqref{ch:06:eq:cc-energy} 只含相连项：$t_{ij}^{ab}$ 是相连双激发，$t_i^a t_j^b$ 是两条单激发在同一个顶点相接的相连组合。对正则 HF 轨道，Brillouin 定理给出 $f_{ia}=0$，第一项求和消失，但 $t_i^a$ 仍通过式~\eqref{ch:06:eq:cc-energy} 的最后一项以及双激发方程影响能量。
+
+振幅由 $\bar{H}$ 在激发流形上的投影为零确定：
+\begin{equation}
+\bracket{\Phi_i^a|\bar{H}|\Phi_0}=0,
+\qquad
+\bracket{\Phi_{ij}^{ab}|\bar{H}|\Phi_0}=0 .
+\label{ch:06:eq:cc-amplitude}
+\end{equation}
+式~\eqref{ch:06:eq:cc-amplitude} 是 CCSD 的振幅方程。与 CI 的本征值问题不同，这里不是求 $\bar{H}$ 的本征矢，而是强迫参考态在激发流形上的分量消失；能量随后由式~\eqref{ch:06:eq:cc-energy} 单独计算。展开后，双激发方程可写成
+\begin{equation}
+\Delta_{ij}^{ab}\,t_{ij}^{ab}
+= \bracket{ij|ab} + \cdots,
+\qquad
+\Delta_{ij}^{ab}
+= \varepsilon_i+\varepsilon_j-\varepsilon_a-\varepsilon_b,
+\label{ch:06:eq:ccsd-doubles}
+\end{equation}
+其中 $\Delta_{ij}^{ab}$ 是双激发能量分母，省略号包含由 $t_1$、$t_2$ 组成的非线性耦合项。式~\eqref{ch:06:eq:ccsd-doubles} 与 MP2 的分母形式相同，但右边不再只含裸积分，而含已收敛的振幅；因此 CCSD 必须迭代求解，且解出的 $t_2$ 通过 $\frac12\op{T}_2^2$ 包含了 MP2 所没有的高阶断开相关。单、双激发方程相互耦合，通常用 DIIS 加速迭代。
+
+实际实现从 $t_1=t_2=0$（即 MP2 的零阶）出发，每步由当前振幅构造 $\bar{H}$ 在单、双激发流形上的投影，得到残差并更新振幅。由于 $\bar{H}$ 的 BCH 展开只到四体项，单激发方程只含 $t_1$、$t_2$ 的低次项，双激发方程也只含到二次项；单次残差计算的标度是 $\mathcal{O}(N^6)$，内存主要由 $t_{ij}^{ab}$（$\mathcal{O}(N^4)$）和双电子积分（$\mathcal{O}(N^4)$）占据。收敛判据通常取最大振幅改变量小于一个远严于化学精度的预设阈值；若迭代振荡，DIIS 用历史残差的线性组合稳定收敛。与 CI 的 Davidson 迭代相比，CC 的每一步更贵，但残差直接给出振幅方程，不需要构造整个 Hamiltonian 矩阵。
+
+\subsection{CCSD(T)：微扰三激发}
+\label{ch:06:sec:ccsdt}
+
+CCSD 忽略相连三激发，这对平衡构型的小分子通常不够精确。CCSD(T) 在收敛的 CCSD 解上，用微扰论一次性加入三激发的能量修正\citep{raghavachari1989,bartlett2007cc}：
+\begin{equation}
+E^{(T)}
+= \frac{1}{36}
+\sum_{i,j,k}\sum_{a,b,c}
+\frac{\big|W_{ijk}^{abc}\big|^2}
+     {\Delta_{ijk}^{abc}},
+\qquad
+\Delta_{ijk}^{abc}
+= \varepsilon_i+\varepsilon_j+\varepsilon_k
+-\varepsilon_a-\varepsilon_b-\varepsilon_c .
+\label{ch:06:eq:ccsd-t}
+\end{equation}
+式~\eqref{ch:06:eq:ccsd-t} 是示意形式：$W_{ijk}^{abc}$ 是含 CCSD 单、双振幅的连通三激发残差（包括裸的三电子积分以及 $T_1$、$T_2$ 的贡献），$1/36$ 来自三对指标的重复计数。分母 $\Delta_{ijk}^{abc}$ 与 MP2 一样可能出现小值，这是 CCSD(T) 在强静态相关下失效的原因之一。三激发修正不迭代，只在 CCSD 收敛后算一次，因此成本比迭代 CCSDT 低得多；代价是它只是微扰估计，且在键断裂区不再可靠。
+
+CCSD(T) 的总能量是 $E_{\mathrm{CCSD}}+E^{(T)}$。由于 $E^{(T)}$ 由连通图求和得到，它保持尺寸广延性；但由于 $\bar{H}$ 非厄米且 $E^{(T)}$ 是微扰修正，总能量不是变分的。式~\eqref{ch:06:eq:ccsd-t} 的 $\mathcal{O}(N^7)$ 标度（三个占据、三个虚指标与一个剩余求和）使其成为常规单参考计算的成本上限。
+
+值得把 CCSD(T) 与迭代的 CCSDT 区分开。CCSDT 把 $\op{T}_3$ 作为独立振幅迭代求解，能量对所有激发阶数一致，成本约 $\mathcal{O}(N^8)$；CCSD(T) 只在 CCSD 解上做一次微扰估计，成本低一个数量级，因此在中等分子上更实用。代价是式~\eqref{ch:06:eq:ccsd-t} 的分母没有来自 $\op{T}_3$ 方程的反馈：当三激发与双激发近简并时，微扰修正可能过大甚至给出错误符号。这正是后面要强调的"强静态相关失效"的一个具体机制，也是 CCSD(T) 不能用于键断裂势能面的原因。
+
+\subsection{EOM-CC 与 $\Lambda$ 方程（简述）}
+\label{ch:06:sec:eom}
+
+CC 的指数拟设不只给出基态。激发态可通过 EOM-CC（equation-of-motion coupled cluster）得到\citep{bartlett2007cc}：在 CC 基态上作用一个线性激发算符 $\op{R}_k$，
+\begin{equation}
+\bar{H}\,\op{R}_k\ket{\Phi_0}
+= \omega_k\,\op{R}_k\ket{\Phi_0},
+\qquad
+\bra{\Phi_0}\op{L}_k\bar{H}
+= \omega_k\,\bra{\Phi_0}\op{L}_k ,
+\label{ch:06:eq:eom-cc}
+\end{equation}
+其中 $\omega_k$ 是相对 CC 基态的激发能，$\op{R}_k$ 与 $\op{L}_k$ 分别是右、左本征矢。式~\eqref{ch:06:eq:eom-cc} 是非厄米本征问题，左右矢不同；EOM-CCSD 通常取 $\op{R}_k=\op{R}_1+\op{R}_2$，成本与 CCSD 同阶。
+
+解析梯度需要 $\Lambda$ 方程。定义 $\op{\Lambda}=\op{\Lambda}_1+\op{\Lambda}_2$ 为左本征矢的振幅，它满足
+\begin{equation}
+\bracket{\Phi_0|(1+\op{\Lambda})(\bar{H}-E)|\Phi_i^a}=0,
+\qquad
+\bracket{\Phi_0|(1+\op{\Lambda})(\bar{H}-E)|\Phi_{ij}^{ab}}=0 .
+\label{ch:06:eq:lambda}
+\end{equation}
+式~\eqref{ch:06:eq:lambda} 与振幅方程式~\eqref{ch:06:eq:cc-amplitude} 形式对称，但求解方向相反；$\Lambda$ 振幅用于把能量对核坐标的导数写成可计算的期望值，是 CC 几何优化与频率计算的必要组件。本书不展开其推导，只需记住：EOM-CC 与 $\Lambda$ 方程都建立在同一个相似变换 Hamiltonian $\bar{H}$ 上。
+
+\subsection{尺寸广延性：指数拟设的连通性}
+\label{ch:06:sec:extensivity}
+
+现在回到第 5 章的核心问题：为什么 CC 尺寸一致，而 CISD 不？设 $A$、$B$ 相距无穷远，二者之间没有相互作用，总 Hamiltonian 可加：$\op{H}_{AB}=\op{H}_A+\op{H}_B$。CC 的簇算符也按片段分解为 $\op{T}_A+\op{T}_B$，且作用于不相交轨道的算符相互对易。于是指数严格因子化：
+\begin{equation}
+\ee^{\op{T}_A+\op{T}_B}
+= \ee^{\op{T}_A}\,\ee^{\op{T}_B}.
+\label{ch:06:eq:factorization}
+\end{equation}
+式~\eqref{ch:06:eq:factorization} 是 CC 尺寸行为的数学核心。把式~\eqref{ch:06:eq:factorization} 代入式~\eqref{ch:06:eq:cc-wavefunction}，超体系波函数自动成为两个片段波函数的乘积，无需额外约束。能量由式~\eqref{ch:06:eq:cc-energy} 的相连图给出，断开图要么因子化、要么抵消（linked cluster theorem），因此
+\begin{equation}
+E_{AB}(R\to\infty)
+= E_A + E_B ,
+\label{ch:06:eq:cc-additivity}
+\end{equation}
+与第 2 章式~\eqref{ch:02:eq:size-consistency} 完全一致。对 $n$ 个相同片段，式~\eqref{ch:06:eq:cc-additivity} 重复应用即得 $E_{A_n}=nE_A$，满足尺寸广延性式~\eqref{ch:02:eq:size-extensivity}。
+
+对比 CISD：它的波函数是式~\eqref{ch:05:eq:cisd} 的线性组合，截断后 $c_{ijkl}^{abcd}$ 根本不存在，无法像式~\eqref{ch:06:eq:factorization} 那样把两个双激发相乘。CC 用指数把断开乘积"藏"在 $\frac12\op{T}_2^2$ 里，因此既不需要显式存储四激发振幅，又能在能量中正确计入它们的相连组合。式~\eqref{ch:06:eq:cc-additivity} 的代价是 CC 非变分：$\bar{H}$ 非厄米，能量可能低于或高于精确值；这与尺寸一致性是两个独立的性质（第 2 章表~\ref{ch:02:tab:properties}）。
+
+从图论看，式~\eqref{ch:06:eq:cc-energy} 只保留\textbf{连通图}（linked diagrams）的贡献；指数 $\ee^{\op{T}}$ 生成的断开图要么在能量投影中因子化为片段能量的乘积，要么相互抵消。这就是 linked cluster theorem 的内容，也是"相连簇"一词的来源。截断 CI 的线性展开没有这种指数结构：它保留了一些断开图，却缺少另一些，二者无法配平，于是能量不可加。表~\ref{ch:06:tab:compare} 把这一区别与成本放在一起对照。
+
+\begin{table}[t]
+\centering
+\small
+\caption{CI 与 CC 的尺寸行为对照（数值成本为矩阵--向量积或残差计算的主导标度）。}\label{ch:06:tab:compare}
+\begin{tabular}{@{}llccc@{}}
+\toprule
+方法 & 高阶激发的处理 & 变分 & 尺寸一致 & 成本 \\
+\midrule
+CISD & 线性截断到双激发 & 是 & 否 & $\mathcal{O}(N^6)$ \\
+CCSD & 指数拟设到双激发 & 否 & 是 & $\mathcal{O}(N^6)$ \\
+CCSD(T) & 加一次微扰三激发 & 否 & 是 & $\mathcal{O}(N^7)$ \\
+CCSDT & 迭代三激发 & 否 & 是 & $\mathcal{O}(N^8)$ \\
+FCI & 全部激发 & 是 & 是 & 指数增长 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ---- 4. CH4 结果框 ----
+\begin{ch4box}
+CH$_4$/def2-TZVPP：$E_{\mathrm{CCSD(T)}} = -40.438598$\,Eh
+（CSV 精确值 $-40.438597868462$\,Eh）。
+按定义 $\Delta E = 0.00$\,kcal·mol$^{-1}$；CCSD(T)/def2-TZVPP 是本书全部 CH$_4$ $\Delta E$ 的参考值。
+作为对照，CISD 的同一能量为 $-40.422685$\,Eh，$\Delta E = +9.99$\,kcal·mol$^{-1}$；
+这个差值是尺寸不一致误差与激发截断误差的总和，不能全部归因于 CCSD(T) 的"三激发修正"。
+\end{ch4box}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{把 CCSD(T) 当作变分方法}：相似变换 $\bar{H}=\ee^{-\op{T}}\op{H}\ee^{\op{T}}$ 不是幺正变换，式~\eqref{ch:06:eq:cc-energy} 的能量没有上界保证；不能因为数值接近精确值就称其"变分"。
+  \item \textbf{用 CCSD(T) 处理键断裂或强静态相关}：式~\eqref{ch:06:eq:ccsd-t} 的分母在近简并时趋于零，微扰三激发失效；这类问题应转向 CASSCF/CASPT2 等多参考方法。
+  \item \textbf{把"gold standard"理解为与基组无关}：CCSD(T) 的精度依赖基组与参考态；本书的参考值明确限定为 CCSD(T)/def2-TZVPP，换基组或换参考态都不能直接比较。
+  \item \textbf{混淆尺寸一致与变分性}：CCSD(T) 尺寸一致但非变分，CISD 变分但不尺寸一致；两者不能互相替代（第 2 章表~\ref{ch:02:tab:properties}）。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+CC 用指数拟设式~\eqref{ch:06:eq:cc-wavefunction} 替代 CI 的线性展开；指数式~\eqref{ch:06:eq:exponential} 中的 $\frac12\op{T}_2^2$ 等项自动生成断开激发，从而修复了 CISD 的尺寸不一致（式~\eqref{ch:06:eq:factorization}--\eqref{ch:06:eq:cc-additivity}）。相似变换 Hamiltonian 式~\eqref{ch:06:eq:similarity} 的 BCH 展开式~\eqref{ch:06:eq:bch} 在四体项后终止，使 CCSD 能量式~\eqref{ch:06:eq:cc-energy} 与振幅方程式~\eqref{ch:06:eq:cc-amplitude} 可以高效迭代求解；CCSD(T) 再用式~\eqref{ch:06:eq:ccsd-t} 一次性加入微扰三激发，成为单参考计算的"黄金标准"，代价是非变分与 $\mathcal{O}(N^7)$ 成本。但指数拟设仍以单个行列式为参考；当静态相关使一个行列式不再足够时，CC 的微扰分母会失效。带着这个问题，我们进入第 7 章：CASSCF：当一个行列式不够时怎么办？
