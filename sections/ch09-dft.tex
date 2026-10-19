@@ -192,13 +192,13 @@ CH$_4$/def2-TZVPP，ORCA 关键词 \texttt{! PBE def2-TZVPP TightSCF}：
 E_{\mathrm{PBE}} = -40.464324\ \mathrm{Eh}, \qquad
 E_{\mathrm{CCSD(T)}} = -40.438598\ \mathrm{Eh}.
 \]
-\[
+\begin{align*}
 \Delta E
-= \big(E_{\mathrm{PBE}} - E_{\mathrm{CCSD(T)}}\big)\times 627.509474
-= \big(-40.464324 -(-40.438598)\big)\times 627.509474
-= (-0.025726)\times 627.509474
+&= \big(E_{\mathrm{PBE}} - E_{\mathrm{CCSD(T)}}\big)\times 627.509474 \\
+&= \big(-40.464324 -(-40.438598)\big)\times 627.509474 \\
+&= (-0.025726)\times 627.509474
 = -16.14\ \mathrm{kcal\cdot mol^{-1}}.
-\]
+\end{align*}
 用未舍入的 CSV 能量 $-40.464323928376$\,Eh 与 $-40.438597868462$\,Eh 计算，得 $\Delta E = -16.143346 \approx -16.14$\,kcal·mol$^{-1}$。PBE 能量比 CCSD(T) 参考低 16.14\,kcal·mol$^{-1}$——这是泛函的系统误差，不是"PBE 更精确"。
 \end{ch4box}
 
