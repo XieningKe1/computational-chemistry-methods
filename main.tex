@@ -1,0 +1,64 @@
+% ============================================================
+% main.tex — 计算化学方法讲义
+% 编译：latexmk -xelatex main.tex
+% 单章：./build-chapter.sh sections/ch03-hf
+% ============================================================
+\documentclass[UTF8,11pt,a4paper,fontset=fandol]{ctexart}
+\input{preamble}
+
+% build-chapter.sh 通过 \ChapterIncludeOnly 注入 \includeonly
+\ifdefined\ChapterIncludeOnly
+  \includeonly{\ChapterIncludeOnly}
+\fi
+
+\begin{document}
+
+% ---------------- 封面 ----------------
+\begin{titlepage}
+  \thispagestyle{empty}
+  \centering
+  \vspace*{0.22\textheight}
+  {\Huge\bfseries 计算化学方法讲义\par}
+  \vspace{1.4em}
+  {\Large 从 Hartree--Fock 到分子力场：每个方法为什么存在\par}
+  \vspace{2.2em}
+  {\large 基于 ORCA 6.1.1 / def2-TZVPP 的 CH$_4$ 与 H$_2^-$ 算例\par}
+  \vfill
+  {\large 2026\par}
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+% ---------------- 正文 16 章 ----------------
+\include{sections/ch01-overview}
+\include{sections/ch02-foundations}
+\include{sections/ch03-hf}
+\include{sections/ch04-mp2}
+\include{sections/ch05-ci}
+\include{sections/ch06-cc}
+\include{sections/ch07-casscf}
+\include{sections/ch08-mrpt-mrci}
+\include{sections/ch09-dft}
+\include{sections/ch10-lda-gga}
+\include{sections/ch11-meta-gga}
+\include{sections/ch12-hybrid}
+\include{sections/ch13-double-hybrid}
+\include{sections/ch14-xtb}
+\include{sections/ch15-force-field}
+\include{sections/ch16-summary}
+
+% ---------------- 附录 ----------------
+\appendix
+\ctexset{section/name={附录,}}
+\include{appendix/app-orca}
+\include{appendix/app-data}
+\include{appendix/app-exercises}
+\include{appendix/app-glossary}
+
+% ---------------- 参考文献 ----------------
+\bibliographystyle{plainnat}
+\bibliography{refs}
+\nocite{szabo1996}
+
+\end{document}

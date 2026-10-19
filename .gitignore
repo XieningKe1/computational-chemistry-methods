@@ -1,0 +1,43 @@
+# LaTeX intermediates
+*.aux
+*.log
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.xdv
+*.bbl
+*.blg
+*.nav
+*.snm
+*.vrb
+chapter-build.*
+
+# Python
+__pycache__/
+*.pyc
+
+# ORCA scratch
+*.gbw
+*.densities
+*.densitiesinfo
+*.property.txt
+*.bas0
+*.bas1
+*.bas2
+*.bas3
+*.bas4
+*.bas5
+*.status
+*.time
+*.xtbrestart
+*.gfnff_charges
+*.gfnff_topo
+*.citations.tmp
+runs/**/*.bibtex
+*.tmp
+
+# Agent continuation state
+.omo/run-continuation/

@@ -1,0 +1,157 @@
+% ============================================================
+% preamble.tex — 计算化学方法讲义 公共导言区
+% 文档类在 main.tex 中：ctexart[UTF8,11pt,a4paper,fontset=fandol]
+% 本文件只负责宏包、颜色、宏与 tcolorbox 环境。
+% ============================================================
+
+% ---------- 页面与排版 ----------
+\usepackage[a4paper,margin=2.5cm,headheight=15pt]{geometry}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+% ---------- 图与表 ----------
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,backgrounds}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+
+% ---------- 代码 ----------
+\usepackage{listings}
+
+% ---------- 文字与页眉 ----------
+\usepackage{microtype}
+\usepackage{fancyhdr}
+
+% ---------- tcolorbox（必须在 hyperref 之前） ----------
+\usepackage[most]{tcolorbox}
+
+% ============================================================
+% Okabe–Ito 色板（全书唯一颜色来源；章节文件不得写颜色字面量）
+% ============================================================
+\definecolor{oiBlue}{HTML}{0072B2}
+\definecolor{oiOrange}{HTML}{E69F00}
+\definecolor{oiGreen}{HTML}{009E73}
+\definecolor{oiVermillion}{HTML}{D55E00}
+\definecolor{oiPurple}{HTML}{CC79A7}
+\definecolor{oiSky}{HTML}{56B4E9}
+
+% ---------- 引用与链接（hyperref 最后加载） ----------
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[unicode,colorlinks=true,bookmarksnumbered=true,
+            linkcolor=oiBlue,citecolor=oiGreen,urlcolor=oiVermillion]{hyperref}
+
+% ============================================================
+% 数学宏（CONTRACT.md §3，章节作者只使用、不定义）
+% ============================================================
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\ee}{\mathrm{e}}
+\newcommand{\ii}{\mathrm{i}}
+\newcommand{\HF}{\mathrm{HF}}
+\newcommand{\xc}{\mathrm{xc}}
+\newcommand{\ket}[1]{\lvert #1\rangle}
+\newcommand{\bra}[1]{\langle #1\rvert}
+\newcommand{\op}[1]{\hat{#1}}
+
+% \braket{a|b}      -> \langle a \mid b \rangle
+% \bracket{a|O|b}   -> \langle a \mid O \mid b \rangle
+% 以 | 为定界符递归切分（1 个、2 个或更多竖线均可）；
+% 每段之间排 \mid，绝不原样输出 '|'。
+\makeatletter
+\def\braket@nil{\@nil}
+\def\braket#1{\begingroup\langle\braket@loop#1|\braket@nil\rangle\endgroup}
+\def\braket@loop#1|#2\braket@nil{%
+  #1%
+  \if\relax\detokenize{#2}\relax\else\mid\braket@loop#2\braket@nil\fi}
+\def\bracket#1{\begingroup\langle\bracket@loop#1|\braket@nil\rangle\endgroup}
+\def\bracket@loop#1|#2\braket@nil{%
+  #1%
+  \if\relax\detokenize{#2}\relax\else\mid\bracket@loop#2\braket@nil\fi}
+\makeatother
+
+% ============================================================
+% 四个可断页 tcolorbox 环境（均接受一个可选参数）
+% ============================================================
+\newtcolorbox{problemchain}[1][]{
+  enhanced, breakable,
+  title={问题链},
+  colframe=oiBlue, colback=oiBlue!6!white, colbacktitle=oiBlue, coltitle=white,
+  boxrule=0.6pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries, #1}
+
+\newtcolorbox{methodcard}[1][]{
+  enhanced, breakable,
+  title={方法卡片},
+  colframe=oiGreen, colback=oiGreen!6!white, colbacktitle=oiGreen, coltitle=white,
+  boxrule=0.6pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries, #1}
+
+\newtcolorbox{ch4box}[1][]{
+  enhanced, breakable,
+  title={CH$_4$ 算例（def2-TZVPP）},
+  colframe=oiOrange, colback=oiOrange!6!white, colbacktitle=oiOrange, coltitle=black,
+  boxrule=0.6pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries, #1}
+
+\newtcolorbox{pitfall}[1][]{
+  enhanced, breakable,
+  title={常见陷阱},
+  colframe=oiVermillion, colback=oiVermillion!6!white, colbacktitle=oiVermillion, coltitle=white,
+  boxrule=0.6pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries, #1}
+
+% ============================================================
+% 编号、目录、页眉、参考文献
+% ============================================================
+\numberwithin{equation}{section}
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+\allowdisplaybreaks
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{2}
+\renewcommand{\refname}{参考文献}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\nouppercase{\leftmark}}
+\fancyhead[R]{\small 计算化学方法讲义}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% 章标题自动生成“第 N 章”；章节文件只写 \section{<标题>}
+\ctexset{section/name={第,章}}
+
+% ============================================================
+% ORCA 输出 listings 风格
+% ============================================================
+\lstdefinestyle{orca}{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  breakatwhitespace=false,
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{oiBlue!45!white},
+  backgroundcolor=\color{oiBlue!3!white},
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  numbers=none,
+  commentstyle=\color{oiGreen},
+  keywordstyle=\color{oiBlue}\bfseries,
+  stringstyle=\color{oiVermillion},
+  xleftmargin=0.5em,
+  xrightmargin=0.5em,
+  aboveskip=0.5em,
+  belowskip=0.5em
+}
+\lstset{style=orca}
+
+% 列表间距
+\setlist{itemsep=2pt,topsep=3pt}
