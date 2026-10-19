@@ -145,12 +145,12 @@ E_\xc[\rho]
 \begin{enumerate}
   \item \textbf{LDA}：只用 $\rho(\mathbf{r})$，基于均匀电子气\citep{vosko1980}（第 10 章）。
   \item \textbf{GGA}：加入密度梯度 $\nabla\rho$，以 PBE 为代表\citep{perdew1996pbe}（第 10 章）。
-  \item \textbf{meta-GGA}：再加入动能密度 $\tau$（与等轨道指示器 $\alpha$），代表有 TPSS\citep{tao2003}、SCAN\citep{sun2015scan}、r\textsuperscript{2}SCAN\citep{furness2020r2scan}（第 11 章）。
+  \item \textbf{meta-GGA}：再加入动能密度 $\tau$（与等轨道指示器 $\alpha$），代表有 TPSS\citep{tao2003}、SCAN\citep{sun2015scan}、r$^2$SCAN\citep{furness2020r2scan}（第 11 章）。
   \item \textbf{hybrid}：混入部分精确交换，代表 B3LYP\citep{becke1993b3lyp,lee1988}、PBE0\citep{adamo1999pbe0}、$\omega$B97M-V\citep{mardirossian2016wb97mv}（第 12 章）。
   \item \textbf{double hybrid}：再加入未占据轨道的 MP2 微扰项，代表 B2PLYP\citep{grimme2006b2plyp}、PWPB95\citep{goerigk2011pwpb95}（第 13 章）。
 \end{enumerate}
 
-需要强调，天梯是"信息层级"而非"精度保证"：某些 meta-GGA 经过仔细设计可以胜过粗糙的杂化，正如第 1 章三轴分析所说，方法好坏要相对于所问问题判断。梯级之上的 B97-3c\citep{brandenburg2018b973c} 与 r\textsuperscript{2}SCAN-3c\citep{grimme2021r2scan3c} 是经验复合方法（泛函 + 内置基组 + 色散校正），不是新梯级。
+需要强调，天梯是"信息层级"而非"精度保证"：某些 meta-GGA 经过仔细设计可以胜过粗糙的杂化，正如第 1 章三轴分析所说，方法好坏要相对于所问问题判断。梯级之上的 B97-3c\citep{brandenburg2018b973c} 与 r$^2$SCAN-3c\citep{grimme2021r2scan3c} 是经验复合方法（泛函 + 内置基组 + 色散校正），不是新梯级。
 
 沿天梯上行，代价是每一级都增加局部量的计算量与数值稳定性要求；收益则取决于体系类型。经验上，GGA 对固体与表面友好，meta-GGA 与杂化对主族分子热化学更准，范围分离杂化对电荷转移与激发态更可靠，双杂化在弱相互作用与反应能上进一步改善。本书的 17 行表（第 1 章表~\ref{ch:01:tab:methods}）把这一层次与成本标度并列，方便按问题选级。
 

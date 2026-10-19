@@ -103,7 +103,7 @@
 {\setlength{\tabcolsep}{4pt}
 \small
 \begin{longtable}{@{}p{1.7cm} p{4.5cm} p{1.2cm} p{2.0cm} p{1.9cm} p{2.2cm}@{}}
-\caption{17 个方法的存在意义、成本标度、尺寸行为、相关类型与 CH$_4$ ORCA 关键词。}\label{ch:01:tab:methods}\\
+\caption{17 行（18 个方法；GFN2-xTB/GFN-FF 合并一行）的存在意义、成本标度、尺寸行为、相关类型与 CH$_4$ ORCA 关键词。}\label{ch:01:tab:methods}\\
 \toprule
 方法 & 解决上一级什么问题（存在意义） & 成本标度 & 尺寸一致性\,/\,广延性 & 相关类型 & CH$_4$ ORCA 关键词 \\
 \midrule
@@ -126,7 +126,7 @@ MRCI & 对活性空间做变分组态展开，系统补足静态与动态相关 
 SVWN5（LDA） & 用均匀电子气的精确结果近似 $E_\xc$，给出最小可行的 DFT & $\mathcal{O}(N^3)$ & 是\,/\,是 & 全部（半局域近似） & \texttt{! LDA def2-TZVPP TightSCF}（ORCA 取 SVWN5） \\
 PBE（GGA） & 加入密度梯度修正，普适改善分子与固体；复合变体 B97-3c 为内置基组的经验校正（非新梯级） & $\mathcal{O}(N^3)$ & 是\,/\,是 & 全部（半局域近似） & \texttt{! PBE def2-TZVPP TightSCF} \\
 TPSS（meta-GGA） & 加入动能密度 $\tau$，在少用经验参数的前提下逼近更高精度 & $\mathcal{O}(N^3)$ & 是\,/\,是 & 全部（半局域近似） & \texttt{! TPSS def2-TZVPP TightSCF} \\
-r\textsuperscript{2}SCAN（meta-GGA） & 用正则化恢复正确的渐近与约束行为；复合变体 r\textsuperscript{2}SCAN-3c 亦然（非新梯级） & $\mathcal{O}(N^3)$ & 是\,/\,是 & 全部（半局域近似） & \texttt{! R2SCAN def2-TZVPP TightSCF} \\
+r$^2$SCAN（meta-GGA） & 用正则化恢复正确的渐近与约束行为；复合变体 r$^2$SCAN-3c 亦然（非新梯级） & $\mathcal{O}(N^3)$ & 是\,/\,是 & 全部（半局域近似） & \texttt{! R2SCAN def2-TZVPP TightSCF} \\
 B3LYP（全局杂化） & 混入 20\% 精确交换，修正半局域泛函的自相互作用误差 & $\mathcal{O}(N^4)$ & 是\,/\,是 & 全部（含精确交换） & \texttt{! B3LYP def2-TZVPP TightSCF} \\
 $\omega$B97M-V（范围分离杂化 + VV10） & 范围分离精确交换 + 非局域相关（VV10），提升非共价与热化学 & $\mathcal{O}(N^4)$ & 是\,/\,是 & 全部（含非局域） & \texttt{! wB97M-V def2-TZVPP TightSCF} \\
 B2PLYP（双杂化） & 用 MP2 微扰项把动态相关装进 DFT，兼得泛函与微扰的优点 & $\mathcal{O}(N^5)$ & 是\,/\,是 & 全部（DFT + MP2） & \texttt{! B2PLYP def2-TZVPP def2-TZVPP/C TightSCF} \\
@@ -135,16 +135,16 @@ GFN2-xTB\,/\,GFN-FF（半经验与力场合并一行） & GFN2-xTB 是带自洽�
 \end{longtable}
 }
 
-\noindent{\footnotesize 表注：$\Delta E_{\mathrm{method}} = \big(E_{\mathrm{method}} - E_{\mathrm{CCSD(T)}}\big)\times 627.509474$（kcal·mol$^{-1}$），正值表示高于参考；参考值取 CCSD(T)/def2-TZVPP 的 CH$_4$ 能量。表中"尺寸一致性\,/\,广延性"以"是\,/\,是"表示两者均满足。B97-3c 与 r\textsuperscript{2}SCAN-3c 使用内置基组（def2-mTZVP\,/\,def2-mTZVPP），是经验复合变体而非新梯级。\textbf{最后一行的 GFN2-xTB 与 GFN-FF 总能量不含完整电子结构意义，与量子化学方法的能量不可直接比较}，本讲义任何 $\Delta E$ 讨论都不使用它们。\par}
+\noindent{\footnotesize 表注：$\Delta E_{\mathrm{method}} = \big(E_{\mathrm{method}} - E_{\mathrm{CCSD(T)}}\big)\times 627.509474$（kcal·mol$^{-1}$），正值表示高于参考；参考值取 CCSD(T)/def2-TZVPP 的 CH$_4$ 能量。表中"尺寸一致性\,/\,广延性"以"是\,/\,是"表示两者均满足。B97-3c 与 r$^2$SCAN-3c 使用内置基组（def2-mTZVP\,/\,def2-mTZVPP），是经验复合变体而非新梯级。\textbf{最后一行的 GFN2-xTB 与 GFN-FF 总能量不含完整电子结构意义，与量子化学方法的能量不可直接比较}，本讲义任何 $\Delta E$ 讨论都不使用它们。\par}
 
 \subsection{CH$_4$ 与 H$_2^-$ 算例协议}
 \label{ch:01:sec:protocols}
 
 全书用两个贯穿始终的算例把不同方法放到同一精度标尺上，所有数值只来自 \texttt{data/*.csv}。
 
-\textbf{CH$_4$ 单点}：采用 $T_d$ 对称构型，$r(\mathrm{C\!-\!H}) = 1.087$\,\AA（坐标块取 $a = 0.6276$\,\AA），电荷 0、多重度 1。20 个方法中有 18 个在 def2-TZVPP 下计算，B97-3c 与 r\textsuperscript{2}SCAN-3c 使用各自内置基组；参考值为 CCSD(T)/def2-TZVPP $E = -40.438598$\,Eh。能量与 $\Delta E$ 见 \texttt{data/ch4\_results.csv}。
+\textbf{CH$_4$ 单点}：采用 $T_d$ 对称构型，$r(\mathrm{C\!-\!H}) = 1.087$\,\AA（坐标块取 $a = 0.6276$\,\AA），电荷 0、多重度 1。20 个方法中，16 个用 def2-TZVPP；B97-3c 与 r$^2$SCAN-3c 使用各自内置基组（def2-mTZVP / def2-mTZVPP）；GFN2-xTB 与 GFN-FF 不含外部基组。参考值为 CCSD(T)/def2-TZVPP $E = -40.438598$\,Eh。能量与 $\Delta E$ 见 \texttt{data/ch4\_results.csv}。
 
-\textbf{H$_2^-$ 势能曲线}：6 个方法（UHF、MP2、CCSD(T)、CASSCF、NEVPT2、MRCI）各扫 8 个核间距 $R = 0.6$–$3.0$\,\AA（$0.6$–$1.5$ 步长 0.2，其后步长 0.5），全部 $n_{\mathrm{roots}} = 1$，活性空间 CAS(3,2)。数据见 \texttt{data/h2m\_pes.csv}。CH$_4$ 检验"同一分子、不同方法"的能量标尺，H$_2^-$ 检验"同一方法、不同键长"的行为差异，两者共同支撑第 16 章的决策树。
+\textbf{H$_2^-$ 势能曲线}：6 个方法（UHF、MP2、CCSD(T)、CASSCF、NEVPT2、MRCI）各扫 8 个核间距 $R = 0.6$–$3.0$\,\AA（$0.6$–$1.2$ 步长 0.2，随后 $1.5$，之后 $2.0$–$3.0$ 步长 0.5），全部 $n_{\mathrm{roots}} = 1$，活性空间 CAS(3,2)。数据见 \texttt{data/h2m\_pes.csv}。CH$_4$ 检验"同一分子、不同方法"的能量标尺，H$_2^-$ 检验"同一方法、不同键长"的行为差异，两者共同支撑第 16 章的决策树。
 
 \subsection{三种阅读路线}
 \label{ch:01:sec:routes}

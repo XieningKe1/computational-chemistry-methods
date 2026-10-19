@@ -119,12 +119,16 @@ def2/J（AuxJ） & 库仑拟合辅助基组 & 加速 SCF 的库仑项（RI-J） 
 
 辅助基组（auxiliary basis set）不增加轨道展开的完备性，只用于分辨率恒等式（resolution-of-the-identity，RI）近似：把四指标双电子积分拆成三/两指标积分的组合，从而大幅降低 MP2 与 SCF 库仑项的成本\citep{weigend2006aux,hellweg2007aux}。本书 CH$_4$ 算例中 B2PLYP 与 PWPB95 的输入都带 \texttt{def2-TZVPP/C}，正是为 RI-MP2 部分提供 AuxC。
 
-有限基组引入一个系统误差：基组叠加误差（basis set superposition error，BSSE）。在二聚体 AB 中，片段 A 会"借用"片段 B 的基函数来降低自身能量，使相互作用被人为增强。定义片段能量时若使用全二聚体基组，可把 BSSE 扣除：\begin{equation}
+有限基组引入一个系统误差：基组叠加误差（basis set superposition error，BSSE）。在二聚体 AB 中，片段 A 会"借用"片段 B 的基函数来降低自身能量，使相互作用被人为增强。BSSE 是片段在二聚体基组中被人为稳定的正能量；counterpoise 校正用单体基组与二聚体基组的片段能量差来估计它：\begin{equation}
+\begin{aligned}
 \Delta E_{\mathrm{BSSE}}
-= \big(E_A^{AB} + E_B^{AB}\big) - \big(E_A^{A} + E_B^{B}\big),
+&= \big(E_A^{A}+E_B^{B}\big)-\big(E_A^{AB}+E_B^{AB}\big)\ge 0,\\
+\Delta E_{\mathrm{int}}^{\mathrm{CP}}
+&= E_{AB}^{AB}-E_A^{AB}-E_B^{AB}.
+\end{aligned}
 \label{ch:02:eq:bsse}
 \end{equation}
-上标表示该能量计算所用的基组。式~\eqref{ch:02:eq:bsse} 即几何抗叠加（counterpoise）校正的核心；对弱相互作用体系（氢键、色散复合物），BSSE 常与真实相互作用能同量级，必须处理。
+上标表示该能量计算所用的基组。式~\eqref{ch:02:eq:bsse} 第一式给出 BSSE 的大小，第二式给出 counterpoise 校正后的相互作用能；对弱相互作用体系（氢键、色散复合物），BSSE 常与真实相互作用能同量级，必须处理。
 
 \subsection{变分原理、密度矩阵与自然轨道}
 \label{ch:02:sec:variational}

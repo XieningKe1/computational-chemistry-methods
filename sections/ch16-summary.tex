@@ -58,10 +58,10 @@ MRCI          & def2-TZVPP   & $-40.428596$ & $+6.28$   & CAS(8,8) + 单双激�
 }
 
 \vspace{2pt}
-\parbox{0.96\linewidth}{\footnotesize 表注：$\Delta E$ 按式~\eqref{ch:16:eq:delta-e} 计算；参考值为 CCSD(T)/def2-TZVPP。B97-3c 与 r$^2$SCAN-3c 使用内置基组 def2-mTZVP\,/\,def2-mTZVPP，是复合方法，不应把其基组改写成 def2-TZVPP。\textbf{GFN2-xTB 与 GFN-FF 的总能不含完整电子结构意义，与量子化学方法不可直接比较}，故其 $\Delta E$ 列填“—”，也不进入图~\ref{ch:16:fig:deviations}。}
+\parbox{0.96\linewidth}{\footnotesize 表注：$\Delta E$ 按式~\eqref{ch:16:eq:delta-e} 计算；参考值为 CCSD(T)/def2-TZVPP。B97-3c 与 r$^2$SCAN-3c 使用内置基组 def2-mTZVP\,/\,def2-mTZVPP，是复合方法（不是雅各布天梯的新梯级），不应把其基组改写成 def2-TZVPP。\textbf{GFN2-xTB 与 GFN-FF 的总能不含完整电子结构意义，与量子化学方法不可直接比较}，故其 $\Delta E$ 列填“—”，也不进入图~\ref{ch:16:fig:deviations}。}
 \end{table}
 
-表~\ref{ch:16:tab:ch4-summary} 最容易误读的是符号。DFT 一族的 $\Delta E$ 几乎全为负，不是因为它们“比 CCSD(T) 更准”，而是因为总能量的零点与相关能的分配方式不同：DFT 用近似 $E_\xc$ 同时承担交换与相关，数值上可以低于 CCSD(T)。波函数方法的 $\Delta E$ 则为正（HF $+140.68$、MP2 $+16.63$、CCSD(T) $0$、MRCI $+6.28$），因为它们在各自截断下逐级逼近同一变分/微扰标尺。把“总能量更低”当成“更可靠”，是本章要拆除的第一个误解。
+表~\ref{ch:16:tab:ch4-summary} 最容易误读的是符号。DFT 一族的 $\Delta E$ 几乎全为负，不是因为它们“比 CCSD(T) 更准”，而是因为总能量的零点与相关能的分配方式不同：DFT 用近似 $E_\xc$ 同时承担交换与相关，数值上可以低于 CCSD(T)。波函数方法的 $\Delta E$ 则为正或零（HF $+140.68$、MP2 $+16.63$、CCSD(T) $0$、MRCI $+6.28$），因为它们在各自截断下逐级逼近同一变分/微扰标尺。把“总能量更低”当成“更可靠”，是本章要拆除的第一个误解。
 
 \subsection{偏差条形图：只看量子化学方法}
 \label{ch:16:sec:deviation-plot}
@@ -150,7 +150,7 @@ UHF $\langle S^2\rangle$ & 0.754473 & 0.764251 & 0.821141 & 纯二重态为 0.75
 \subsection{决策树：按问题类型，而不是按方法清单}
 \label{ch:16:sec:tree}
 
-图~\ref{ch:16:fig:tree} 把全书收束成一棵决策树。第一步问“是否需要电子结构”：断键/成键、电子转移、激发态需要 QM；只需要大体系几何或构象筛选时，力场（GFN-FF/UFF/AMBER）更合适。第二步在 QM 内问“是否有强静态相关/近简并”：有则 CASSCF 起步，再用 NEVPT2/MRCI 补动态相关；没有则留在单参考。第三步按单参考目标分派：参考级热化学用 CCSD(T)，大分子热化学/非共价用双杂化或杂化/meta-GGA，弱相互作用优先 $\omega$B97M-V（+D4），快速筛选用 xTB，周期性/大体系用 PBE 或 meta-GGA 加 D3/D4。
+图~\ref{ch:16:fig:tree} 把全书收束成一棵决策树。第一步问“是否需要电子结构”：断键/成键、电子转移、激发态需要 QM；只需要大体系几何或构象筛选时，力场（GFN-FF/UFF/AMBER）更合适。第二步在 QM 内问“是否有强静态相关/近简并”：有则 CASSCF 起步，再用 NEVPT2/MRCI 补动态相关；没有则留在单参考。第三步按单参考目标分派：参考级热化学用 CCSD(T)，大分子热化学/非共价用双杂化或杂化/meta-GGA，弱相互作用优先 $\omega$B97M-V（已含 VV10），快速筛选用 xTB，周期性/大体系用 PBE 或 meta-GGA 加 D3/D4。
 
 \begin{center}
 \begin{tikzpicture}[
@@ -171,9 +171,9 @@ UHF $\langle S^2\rangle$ & 0.754473 & 0.764251 & 0.821141 & 纯二重态为 0.75
   \node[q] (q3) at (3.3,-4.05) {单参考目标？};
 
   \node[leaf] (l1) at (7.6,-1.65) {CCSD(T)\\参考级热化学（小体系）};
-  \node[leaf] (l2) at (7.6,-2.85) {双杂化\\大分子热化学 / 非共价};
+  \node[leaf] (l2) at (7.6,-2.85) {双杂化（非共价 +D3(BJ)）\\大分子热化学 / 非共价};
   \node[leaf] (l3) at (7.6,-4.05) {杂化 / meta-GGA\\常规热化学、主族反应};
-  \node[leaf] (l4) at (7.6,-5.25) {$\omega$B97M-V (+D4)\\非共价、弱相互作用};
+  \node[leaf] (l4) at (7.6,-5.25) {$\omega$B97M-V（已含 VV10）\\非共价、弱相互作用};
   \node[leaf] (l5) at (7.6,-6.45) {GFN2-xTB / PBE(+D3/D4)\\快速筛选、周期性大体系};
 
   \draw[ar] (q1.south) -- (q2.north) node[el,right]{是};
@@ -186,10 +186,10 @@ UHF $\langle S^2\rangle$ & 0.754473 & 0.764251 & 0.821141 & 纯二重态为 0.75
   \draw[ar] (q3.east) -- (l4.west);
   \draw[ar] (q3.east) -- (l5.west);
 
-  \draw[ar, draw=black!45] (-6.3,-7.0) -- (9.4,-7.0)
-        node[midway,below,font=\scriptsize]{成本 $\uparrow$（向右）};
+  \draw[ar, draw=black!45] (5.55,-6.45) -- (5.55,-1.65)
+        node[midway,left=2pt,font=\scriptsize,rotate=90]{成本 $\uparrow$};
 \end{tikzpicture}
-\captionof{figure}{方法选择决策树：先按问题类型分派，再在 QM 内按相关类型与目标精度选择。成本向右递增；力场与 xTB 分支不含完整电子结构，只用于几何、构象与快速筛选。}
+\captionof{figure}{方法选择决策树：先按问题类型分派，再在 QM 内按相关类型与目标精度选择。成本向上递增；力场与 xTB 分支不含完整电子结构，只用于几何、构象与快速筛选。}
 \label{ch:16:fig:tree}
 \end{center}
 
@@ -202,9 +202,9 @@ UHF $\langle S^2\rangle$ & 0.754473 & 0.764251 & 0.821141 & 纯二重态为 0.75
 \begin{itemize}
   \item \textbf{基组不一致}：把 B97-3c、r$^2$SCAN-3c 的 def2-mTZVP\,/\,def2-mTZVPP 改写成 def2-TZVPP，等于换了一个方法；3c 的校正参数与内置基组绑定（第 10、11 章）。
   \item \textbf{忘记色散}：B3LYP 与 B3LYP-D3 是两个方法；非共价体系不用 D3/D4、VV10 或双杂化，会把结合能算得明显偏弱（第 10、12 章）。
-  \item \textbf{忽视对称性破缺与自旋污染}：UHF/MP2/CCSD(T) 在拉伸键处 $\langle S^2\rangle$ 偏离纯自旋值；先看 $\langle S^2\rangle$ 与 $\langle S^2\rangle$ 的增长，再决定是否转多参考（第 7、8 章与表~\ref{ch:16:tab:h2m-summary}）。
+  \item \textbf{忽视对称性破缺与自旋污染}：UHF/MP2/CCSD(T) 在拉伸键处 $\langle S^2\rangle$ 偏离纯自旋值；先看 $\langle S^2\rangle$ 是否偏离纯自旋值，再决定是否转多参考（第 7、8 章与表~\ref{ch:16:tab:h2m-summary}）。
   \item \textbf{泛函版本混用}：B3LYP、B3LYP-D3、B3LYP-D3(BJ) 的参数化不同；r$^2$SCAN 与 r$^2$SCAN-3c 也不是同一方法。引用结果时必须写全版本（第 12、13 章）。
-  \item \textbf{双杂化缺 AuxC}：B2PLYP/PWPB95 的 RI-MP2 项需要 \texttt{def2-TZVPP/C} 一类辅助基组；省略 AuxC 会退回 AutoAux 或直接失败，结果不可复现（第 13 章与附录~\ref{app:orca}）。
+  \item \textbf{双杂化缺 AuxC}：B2PLYP/PWPB95 的 RI-MP2 项需要 \texttt{def2-TZVPP/C} 一类辅助基组；省略 AuxC 会直接报错（不会自动退回四指数 MP2），结果不可复现（第 13 章与附录~\ref{app:orca}）。
   \item \textbf{3c 基组覆盖不足}：3c 方法的内置基组与校正主要针对主族元素参数化；重元素、过渡金属与强相对论体系不能默认套用（第 10、11 章）。
   \item \textbf{跨方法比较绝对能量}：GFN2-xTB/GFN-FF 与 QM 的总能零点不同；即使同为 QM，不同基组、不同 $E_\xc$ 的绝对能量也不可直接比较，只能比较同一方法内的能量差（表~\ref{ch:16:tab:ch4-summary} 表注）。
 \end{itemize}

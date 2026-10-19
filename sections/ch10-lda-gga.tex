@@ -1,9 +1,9 @@
 % ============================================================
-% sections/ch10-lda-gga.tex —— 第 10 章 LDA/GGA：密度泛函的前两级阶梯够用吗？
+% sections/ch10-lda-gga.tex —— 第 10 章 LDA/GGA：密度泛函前两级够用吗？
 % 页数配额：6 页（±1）。数值只取自 data/*.csv。
 % ============================================================
 
-\section{LDA/GGA：密度泛函的前两级阶梯够用吗？}
+\section{LDA/GGA：密度泛函前两级够用吗？}
 \label{ch:10:sec:title}
 
 % ---- 1. 问题链 ----
@@ -150,7 +150,7 @@ E_{\mathrm{B97}\text{-}\mathrm{3c}}
 + E_{\mathrm{nuc}},
 \label{ch:10:eq:b973c-energy}
 \end{equation}
-其中 $E_{\mathrm{SRB}}$ 是短程基组校正，用来补偿小基组带来的基组叠加误差；$E_{\mathrm{nuc}}$ 是核排斥能。式~\eqref{ch:10:eq:b973c-energy} 表明 B97-3c 的"3c"指三层校正（功能、基组、色散/短程），而不是雅各布天梯上的第三个梯级。它使用的是内置 def2-mTZVP，不能写成 def2-TZVPP，也不能与同基组的 GGA 逐项比较绝对能量\citep{brandenburg2018b973c}。本书把 B97-3c 放在 GGA 一节讨论，是因为它的电子结构核心仍是 GGA；它是\textbf{复合方法，非新 rung}。
+其中 $E_{\mathrm{SRB}}$ 是短程基组校正，用来补偿小基组带来的基组叠加误差；$E_{\mathrm{nuc}}$ 是核排斥能。式~\eqref{ch:10:eq:b973c-energy} 表明 B97-3c 的"3c"指三层校正（泛函、基组、色散/短程），而不是雅各布天梯上的第三个梯级。它使用的是内置 def2-mTZVP，不能写成 def2-TZVPP，也不能与同基组的 GGA 逐项比较绝对能量\citep{brandenburg2018b973c}。本书把 B97-3c 放在 GGA 一节讨论，是因为它的电子结构核心仍是 GGA；它是\textbf{复合方法，非新 rung}。
 
 \subsection{数值积分与网格}
 \label{ch:10:sec:grid}
@@ -158,14 +158,12 @@ E_{\mathrm{B97}\text{-}\mathrm{3c}}
 DFT 的交换相关能是三维积分，实际计算用数值求积：
 \begin{equation}
 \int f(\mathbf r)\,\dd\mathbf r
-\approx \sum_i w_i\,f(\mathbf r_i),
-\qquad
-w_i=\sum_A w_{Ai},
-\qquad
-w_{Ai}=\frac{P_A(\mathbf r_i)}{\sum_B P_B(\mathbf r_i)},
+\approx \sum_A \sum_{i\in A}
+\frac{P_A(\mathbf r_i)}{\sum_B P_B(\mathbf r_i)}\,
+\omega_i^{(A)}\,f(\mathbf r_i),
 \label{ch:10:eq:grid-quadrature}
 \end{equation}
-其中 $P_A$ 是以原子 $A$ 为中心的权重函数。式~\eqref{ch:10:eq:grid-quadrature} 就是 Becke 分块（fuzzy cells）：把分子空间划分成以各原子为中心的模糊胞，再在每个胞内用径向--角向网格积分。径向常用 Gauss--Chebyshev 或 Euler--Maclaurin 变换，角向常用 Lebedev 网格。LDA 与 GGA 的被积函数较平滑，中等网格即可收敛；meta-GGA（第 11 章）含动能密度，被积函数对网格更敏感，这是下一章要强调的数值问题。
+其中 $P_A$ 是以原子 $A$ 为中心的 Becke 权重函数，$\omega_i^{(A)}$ 是原子 $A$ 的径向--角向求积权重（含径向 Jacobian）。式~\eqref{ch:10:eq:grid-quadrature} 就是 Becke 分块（fuzzy cells）：把分子空间划分成以各原子为中心的模糊胞，再在每个胞内用径向--角向网格积分。径向常用 Gauss--Chebyshev 或 Euler--Maclaurin 变换，角向常用 Lebedev 网格。LDA 与 GGA 的被积函数较平滑，中等网格即可收敛；meta-GGA（第 11 章）含动能密度，被积函数对网格更敏感，这是下一章要强调的数值问题。
 
 \subsection{LDA/GGA 的失效模式}
 \label{ch:10:sec:failures}

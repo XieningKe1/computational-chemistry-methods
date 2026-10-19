@@ -157,11 +157,11 @@ Davidson 方法只解决"如何对角化"，不改变 CISD 的截断误差。实
 \begin{equation}
 E_{\mathrm{CISD}+Q}
 = E_{\mathrm{CISD}}
-+ \Big(1-\sum_{I\ne 0}|c_I|^2\Big)
++ \Big(1-|c_0|^2\Big)
   \big(E_{\mathrm{CISD}}-E_\HF\big).
 \label{ch:05:eq:davidson-correction}
 \end{equation}
-式~\eqref{ch:05:eq:davidson-correction} 称为 Davidson 校正（$+Q$）。当 $\sum_{I\ne0}|c_I|^2$ 较小、波函数接近单参考时，它给出合理的改进；但当截断严重或体系变大时，$1-\sum|c_I|^2$ 本身不再可靠，式~\eqref{ch:05:eq:davidson-correction} 既不能恢复严格的尺寸一致性，也破坏了变分性。因此 $+Q$ 只能作为诊断和补救，不能替代尺寸一致的方法。
+式~\eqref{ch:05:eq:davidson-correction} 称为 Davidson 校正（$+Q$）。当 $1-|c_0|^2$ 较小、波函数接近单参考时，它给出合理的改进；但当截断严重或体系变大时，$1-|c_0|^2$ 本身不再可靠，式~\eqref{ch:05:eq:davidson-correction} 既不能恢复严格的尺寸一致性，也破坏了变分性。因此 $+Q$ 只能作为诊断和补救，不能替代尺寸一致的方法。
 
 \subsection{尺寸一致性问题：CISD 的致命缺陷}
 \label{ch:05:sec:size-consistency}
@@ -195,10 +195,10 @@ E_{\mathrm{CISD}}(AB;R\to\infty)
 \begin{equation}
 E_{\mathrm{CISD}}(A_1\cdots A_n)
 - \sum_{p=1}^{n}E_{\mathrm{CISD}}(A_p)
-= -\sum_{p<q}\Delta_{pq}+\cdots,
+= +\sum_{p<q}\Delta_{pq}+\cdots,
 \label{ch:05:eq:pair-error}
 \end{equation}
-其中 $\Delta_{pq}>0$ 是片段 $p$、$q$ 同时发生双激发时被截掉的关联贡献，省略号代表更高阶的断开项。式~\eqref{ch:05:eq:pair-error} 右端的求和有 $n(n-1)/2$ 项，因此误差随片段数二次增长，而能量本身只应线性增长。这正是"尺寸广延性"被破坏的定量含义：即使每个 $\Delta_{pq}$ 很小，片段一多，误差也会累积到与化学能同量级。对只有一个分子的 CH$_4$ 算例，式~\eqref{ch:05:eq:pair-error} 没有直接的片段对，但同样的缺失会表现为相关能回收不足——CISD 的 $+9.99$\,kcal·mol$^{-1}$ 偏差（见下方算例框）就是截断与尺寸行为的混合结果。
+其中 $\Delta_{pq}>0$ 是片段 $p$、$q$ 上被截掉的负相关贡献的绝对值，省略号代表更高阶的断开项。式~\eqref{ch:05:eq:pair-error} 右端的求和有 $n(n-1)/2$ 项，因此误差随片段数二次增长，而能量本身只应线性增长。这正是"尺寸广延性"被破坏的定量含义：即使每个 $\Delta_{pq}$ 很小，片段一多，误差也会累积到与化学能同量级。对只有一个分子的 CH$_4$ 算例，式~\eqref{ch:05:eq:pair-error} 没有直接的片段对，但同样的缺失会表现为相关能回收不足——CISD 的 $+9.99$\,kcal·mol$^{-1}$ 偏差（见下方算例框）就是截断与尺寸行为的混合结果。
 
 这个缺陷直接污染两类计算。第一，反应能：若反应物和产物包含不同数目的独立电子对，CISD 误差不能相消。第二，弱相互作用与键断裂：拉伸时片段近似独立，缺失的断开激发使相互作用能被严重高估。Davidson 校正（$+Q$，式~\eqref{ch:05:eq:davidson-correction}）用微扰方式估计缺失的四激发，能缓解但不能消除尺寸不一致；真正的修复需要一种天然包含断开激发的拟设，这就是下一章的耦合簇。
 
