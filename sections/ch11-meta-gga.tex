@@ -1,3 +1,177 @@
+% ============================================================
+% sections/ch11-meta-gga.tex —— 第 11 章 meta-GGA：加入动能密度能解决什么？
+% 页数配额：5 页（±1）。数值只取自 data/*.csv。
+% ============================================================
+
 \section{meta-GGA：加入动能密度能解决什么？}
 \label{ch:11:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}GGA 仍半局域。\\
+\textbf{本章为什么存在：}加入动能密度 $\tau$ 与等轨道指示器 $\alpha$，为泛函提供更多局域信息。\\
+\textbf{本章留下的新问题：}仍有 SIE、缺非局域相关。
+\end{problemchain}
+
+% ---- 2. 方法卡片 ----
+\begin{methodcard}
+\textbf{方法}：meta-GGA（以 TPSS 与 r$^2$SCAN 为代表）\quad
+\textbf{文献}：\citep{tao2003,sun2015scan,furness2020r2scan}\\
+\textbf{核心近似}：$E_\xc[\rho,\nabla\rho,\tau]$ 依赖密度、密度梯度与动能密度，仍是半局域近似。\\
+\textbf{关键方程}：式~\eqref{ch:11:eq:tau}（动能密度定义）\\
+\textbf{ORCA 关键词}：\texttt{! TPSS def2-TZVPP TightSCF} / \texttt{! R2SCAN def2-TZVPP TightSCF}\\
+\textbf{成本标度}：$\mathcal{O}(N^3)$\quad
+\textbf{能否变分 / 尺寸一致}：对给定泛函可变分；尺寸一致且广延。\\
+\textbf{典型失效}：SIE、缺色散、强静态相关；r$^2$SCAN-3c 是复合方法，不是新梯级。
+\end{methodcard}
+
+% ---- 3. 正文 ----
+\subsection{动能密度 $\tau$ 与等轨道指示器 $\alpha$}
+\label{ch:11:sec:tau}
+
+GGA 只用 $\rho$ 与 $\nabla\rho$，仍然不知道电子在局部是"单个轨道"还是"许多轨道叠加"。KS 轨道本身携带这个信息：动能密度
+\begin{equation}
+\tau(\mathbf r)=\frac12\sum_i^{\mathrm{occ}}\big\lvert\nabla\phi_i(\mathbf r)\big\rvert^2
+\label{ch:11:eq:tau}
+\end{equation}
+对占据轨道求和，既能感知密度的梯度，也能感知轨道的节点与局域化程度。式~\eqref{ch:11:eq:tau} 是 meta-GGA 的新输入；它比 $\nabla\rho$ 多出的信息，正是 meta-GGA 区别于 GGA 的根本。
+
+为了把 $\tau$ 变成无量纲的判据，引入两个参考量：
+\begin{equation}
+\tau_W(\mathbf r)=\frac{\lvert\nabla\rho(\mathbf r)\rvert^2}{8\rho(\mathbf r)},
+\qquad
+\tau_{\mathrm{unif}}(\mathbf r)=\frac{3}{10}(3\pi^2)^{2/3}\rho(\mathbf r)^{5/3},
+\label{ch:11:eq:tau-components}
+\end{equation}
+其中 $\tau_W$ 是 Weizsäcker 动能密度（单轨道极限），$\tau_{\mathrm{unif}}$ 是均匀电子气极限。式~\eqref{ch:11:eq:tau-components} 给出两个极端：单轨道区域 $\tau=\tau_W$，均匀区域 $\tau=\tau_{\mathrm{unif}}$。等轨道指示器（iso-orbital indicator）定义为
+\begin{equation}
+\alpha(\mathbf r)=\frac{\tau(\mathbf r)-\tau_W(\mathbf r)}{\tau_{\mathrm{unif}}(\mathbf r)} .
+\label{ch:11:eq:alpha}
+\end{equation}
+式~\eqref{ch:11:eq:alpha} 把局域电子环境压缩成一个标量：$\alpha=0$ 对应单轨道区（如 H 原子、$\sigma$ 键），$\alpha=1$ 对应均匀电子气，$\alpha\gg 1$ 对应弱键或密度衰减的远尾。$\alpha$ 与电子局域化函数有直接联系，因此 meta-GGA 能"识别"共价、金属与弱相互作用区域，并据此在泛函内部切换不同极限。
+
+有了 $\tau$ 与 $\alpha$，meta-GGA 的一般形式是
+\begin{equation}
+E_\xc^{\mathrm{meta}}[\rho]
+= \int \rho(\mathbf r)\,\varepsilon_\xc\big(\rho,\nabla\rho,\tau\big)\,\dd\mathbf r
+= \int \rho\,\varepsilon_\xc\big(\rho,s,\alpha\big)\,\dd\mathbf r .
+\label{ch:11:eq:meta-form}
+\end{equation}
+式~\eqref{ch:11:eq:meta-form} 与 GGA 的式~\eqref{ch:10:eq:gga-exchange} 结构相同，只是被积函数多了一个变量。多一个变量并不自动带来更高精度：关键在于如何用 $\alpha$ 把已知极限拼接起来，以及拼接是否数值稳定。
+
+\subsection{TPSS：非经验的 meta-GGA}
+\label{ch:11:sec:tpss}
+
+TPSS（Tao--Perdew--Staroverov--Scuseria）是第一个不带经验参数、同时满足多类精确约束的 meta-GGA\citep{tao2003}。它的交换增强因子沿用 PBE 的有理形式，但把变量从 $s$ 换成同时含 $s$ 与 $\tau$ 的组合：
+\begin{equation}
+F_x^{\mathrm{TPSS}}
+= 1+\kappa-\frac{\kappa}{1+x/\kappa},
+\qquad
+x=\frac{10/81+c\,z^2}{(1+z^2)^2}\,p,
+\quad
+z=\frac{5}{3}\frac{\tau_W}{\tau},
+\label{ch:11:eq:tpss-enhancement}
+\end{equation}
+其中 $p=s^2$，$c=1.59096$，$\kappa=0.804$。式~\eqref{ch:11:eq:tpss-enhancement} 在 $z\to 0$（均匀区）回到 GGA 型梯度展开，在单轨道区 $z=5/3$ 给出不同的限制；TPSS 的相关泛函也显式含 $\tau$，用于满足自相互作用在单电子区域的抵消条件。与 PBE 相比，TPSS 多出的 $\tau$ 依赖让它在原子化能、反应热与晶格常数上通常更稳，但它仍然使用式~\eqref{ch:10:eq:grid-quadrature} 的局域积分，仍然没有非局域相关，也仍然带有 SIE。TPSS 的意义在于证明：不拟合经验参数，仅靠精确约束也能构造出可用的第三级泛函。
+
+\subsection{r$^2$SCAN 与数值稳定性}
+\label{ch:11:sec:r2scan}
+
+SCAN 是另一条路线：它用 $\alpha$ 在单轨道、均匀电子气与弱键三个极限之间做插值，并在构造时同时满足 17 条精确约束\citep{sun2015scan}。SCAN 的精度很好，但早期实现暴露出明显的网格敏感性：在远尾或单轨道区域，$\tau_{\mathrm{unif}}$ 很小，式~\eqref{ch:11:eq:alpha} 的 $\alpha$ 对数值误差极其敏感，交换相关势出现振荡，SCF 难以收敛。
+
+r$^2$SCAN 的解决办法是把 $\alpha$ 正则化\citep{furness2020r2scan}：
+\begin{equation}
+\bar{\alpha}(\mathbf r)
+= \frac{\tau(\mathbf r)-\tau_W(\mathbf r)}
+{\tau_{\mathrm{unif}}(\mathbf r)+\eta\,\tau_W(\mathbf r)},
+\qquad
+\eta=0.001 .
+\label{ch:11:eq:r2scan-alpha}
+\end{equation}
+式~\eqref{ch:11:eq:r2scan-alpha} 在 $\tau_{\mathrm{unif}}$ 的分母上加了一个小量 $\eta\tau_W$，消除了单轨道区域的 $0/0$ 型奇异；在密度正常的区域，$\eta\tau_W\ll\tau_{\mathrm{unif}}$，$\bar{\alpha}\approx\alpha$，所以精度基本不变。r$^2$SCAN 同时恢复了 rSCAN 为数值稳定而牺牲的部分精确约束，并换用更平滑的开关函数。交换增强因子仍写成
+\begin{equation}
+F_x^{\mathrm{r}^2\mathrm{SCAN}}
+= 1+\kappa-\frac{\kappa}{1+x/\kappa},
+\qquad
+x=x\big(p,\bar{\alpha}\big),
+\label{ch:11:eq:r2scan-enhancement}
+\end{equation}
+其中 $x$ 由 $p$ 与 $\bar{\alpha}$ 通过开关函数构造，$\kappa=0.804$。式~\eqref{ch:11:eq:r2scan-enhancement} 与式~\eqref{ch:11:eq:tpss-enhancement} 形式相同，差别在变量的定义与开关函数：r$^2$SCAN 的设计目标不是改变泛函的物理内容，而是在保持 SCAN 精度的同时让势能面光滑、网格收敛可靠。对使用者而言，这意味着同样的网格下 r$^2$SCAN 比 SCAN 更不容易出现 SCF 振荡，但"更稳定"不等于"没有 SIE"——半局域的结构性限制仍在。
+
+\subsection{r$^2$SCAN-3c：复合方法，不是新梯级}
+\label{ch:11:sec:r2scan3c}
+
+r$^2$SCAN-3c 把 r$^2$SCAN 与内置 def2-mTZVPP 基组、D4 色散校正和 gCP 几何抗叠加校正组合在一起\citep{grimme2021r2scan3c}。D4 的原子对色散能为
+\begin{equation}
+E_{D4}
+= -\frac12\sum_{A\neq B}\left[
+\frac{s_6\,C_6^{AB}(\mathbf q)}{R_{AB}^6}\,f_6(R_{AB})
++\frac{s_8\,C_8^{AB}(\mathbf q)}{R_{AB}^8}\,f_8(R_{AB})
+\right],
+\label{ch:11:eq:d4}
+\end{equation}
+其中 $C_6^{AB}$、$C_8^{AB}$ 依赖 EEQ 部分电荷 $\mathbf q$，$f_6$、$f_8$ 是阻尼函数\citep{caldeweyher2019d4}。与式~\eqref{ch:10:eq:d3bj} 的 D3(BJ) 相比，式~\eqref{ch:11:eq:d4} 的系数随电荷变化，因此能适应极性体系与带电环境。
+
+gCP 用只依赖几何的原子对势近似 Boys--Bernardi 逆抵校正，补偿小基组的基组叠加误差：
+\begin{equation}
+E_{\mathrm{gCP}}
+= \sum_{A<B}\epsilon_{AB}\,
+\exp\!\big[-\alpha_{AB}\big(R_{AB}-R_{AB}^{0}\big)\big],
+\label{ch:11:eq:gcp}
+\end{equation}
+其中 $\epsilon_{AB}$、$\alpha_{AB}$ 与 $R_{AB}^{0}$ 是元素对参数\citep{kruse2012gcp}。式~\eqref{ch:11:eq:gcp} 是示意形式：实际实现按元素对与基组参数化，但物理内容就是"短程排斥型"的 BSSE 修正。
+
+于是 r$^2$SCAN-3c 的总能为
+\begin{equation}
+E_{\mathrm{r}^2\mathrm{SCAN}\text{-}\mathrm{3c}}
+= E_\xc^{\mathrm{r}^2\mathrm{SCAN}}[\rho]
++ E_{D4}
++ E_{\mathrm{gCP}}
++ E_{\mathrm{nuc}} .
+\label{ch:11:eq:r2scan3c-energy}
+\end{equation}
+式~\eqref{ch:11:eq:r2scan3c-energy} 与 B97-3c 的式~\eqref{ch:10:eq:b973c-energy} 是同一类构造：泛函 + 内置基组 + 色散 + 短程校正。r$^2$SCAN-3c 使用内置 def2-mTZVPP，不能写成 def2-TZVPP；它的"3c"是复合方法的标签，\textbf{不是新 rung（非新梯级）}。把 r$^2$SCAN-3c 与 r$^2$SCAN/def2-TZVPP 的总能直接比较，会把基组与校正的贡献混在一起。
+
+\subsection{适用场景与局限}
+\label{ch:11:sec:scope}
+
+meta-GGA 处在"比 GGA 多一个局域量、比杂化便宜"的位置。它的优势场景包括：主族分子的热化学与反应能、固体与表面的晶格常数与结合能、以及需要较好数值稳定性的常规 SCF。TPSS 适合不想引入经验参数、又希望比 PBE 更稳的场合；r$^2$SCAN 在分子与固体上都有较均衡的表现，且比 SCAN 更耐粗网格；r$^2$SCAN-3c 则把 meta-GGA 包装成"开箱即用"的复合方法，适合中等体系的构型优化与非共价相互作用筛选。
+
+但 meta-GGA 没有解决第 10 章列出的根本问题。第一，SIE 仍在：$\tau$ 是局域量，不能替代精确交换的非局域抵消；电荷转移与过渡态能垒仍有系统误差。第二，非局域相关仍缺：D4 与 gCP 是经验校正，不是从第一性原理来的长程相关；对强色散体系，精度依赖参数化。第三，强静态相关仍失效：拉伸键、双自由基、过渡金属多组态体系需要多参考方法（第 7--8 章）。第四，带隙仍低估：半局域泛函缺少导数不连续。要修 SIE，最直接的办法是混入精确交换；要补动态相关，则要在 DFT 里加入 MP2 型微扰项。这两条路分别通向第 12 章的杂化与第 13 章的双杂化。
+
+% ---- 4. CH4 结果框 ----
+\begin{ch4box}
+CH$_4$ 单点，ORCA 关键词分别为 \texttt{! TPSS def2-TZVPP TightSCF}、\texttt{! R2SCAN def2-TZVPP TightSCF} 与 \texttt{! r2SCAN-3c TightSCF}。表~\ref{ch:11:tab:ch4} 给出总能与相对 CCSD(T)/def2-TZVPP 的偏差。
+
+\begin{center}
+\small
+\begin{tabular}{@{}llrr@{}}
+\toprule
+方法 & 基组 & $E$ / Eh & $\Delta E$ / (kcal·mol$^{-1}$) \\
+\midrule
+TPSS        & def2-TZVPP & $-40.541484$ & $-64.56$ \\
+r$^2$SCAN   & def2-TZVPP & $-40.500987$ & $-39.15$ \\
+r$^2$SCAN-3c & def2-mTZVPP（内置） & $-40.494868$ & $-35.31$ \\
+\midrule
+CCSD(T)（参考） & def2-TZVPP & $-40.438598$ & $0.00$ \\
+\bottomrule
+\end{tabular}
+\captionof{table}{CH$_4$/def2-TZVPP 下 TPSS、r$^2$SCAN 与 r$^2$SCAN-3c 的总能及相对 CCSD(T) 的偏差；r$^2$SCAN-3c 使用内置 def2-mTZVPP。}
+\label{ch:11:tab:ch4}
+\end{center}
+
+以 r$^2$SCAN 为例，$\Delta E=(-40.500987+40.438598)\times 627.509474=-39.15$\,kcal·mol$^{-1}$；用未舍入的 CSV 能量计算得 $-39.149911$。TPSS 的 $-64.56$ 与 r$^2$SCAN-3c 的 $-35.31$ 同理由 CSV 精确值换算。r$^2$SCAN-3c 使用内置 def2-mTZVPP 并含 D4 与 gCP，因此其 $\Delta E$ 同时包含泛函、基组与校正的贡献，不能解释为"r$^2$SCAN-3c 比 r$^2$SCAN 更准"。
+\end{ch4box}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{把 meta-GGA 当作"自动更准"}：TPSS 的 $\Delta E=-64.56$\,kcal·mol$^{-1}$ 比 PBE 的 $-16.14$ 绝对值更大，说明总能量偏移并不随梯级单调减小；精度必须针对具体性质与参考值判断。
+  \item \textbf{把 r$^2$SCAN-3c 当作新 rung}：它是 r$^2$SCAN + 内置 def2-mTZVPP + D4 + gCP 的复合方法，不是雅各布天梯的第四级；与 def2-TZVPP 的 r$^2$SCAN 比较总能量会混淆基组效应。
+  \item \textbf{忽视 $\tau$ 对网格的敏感性}：式~\eqref{ch:11:eq:tau} 的高阶导数在低密度区噪声大；用粗网格或未收敛的轨道评估 meta-GGA，误差可能超过泛函本身的改进。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+本章在 GGA 之上加入动能密度 $\tau$（式~\eqref{ch:11:eq:tau}）与等轨道指示器 $\alpha$（式~\eqref{ch:11:eq:alpha}），把 meta-GGA 写成式~\eqref{ch:11:eq:meta-form} 的局域泛函。TPSS 用式~\eqref{ch:11:eq:tpss-enhancement} 把 $\tau$ 引入交换增强因子，是非经验的第三级泛函；r$^2$SCAN 通过正则化 $\bar{\alpha}$（式~\eqref{ch:11:eq:r2scan-alpha}）与相应的增强因子（式~\eqref{ch:11:eq:r2scan-enhancement}）解决了 SCAN 的数值稳定性问题。r$^2$SCAN-3c 用 D4（式~\eqref{ch:11:eq:d4}）与 gCP（式~\eqref{ch:11:eq:gcp}）把 meta-GGA 包装成复合方法（式~\eqref{ch:11:eq:r2scan3c-energy}），是复合方法，不是新梯级。meta-GGA 改善了热化学与数值稳健性，却没有消除 SIE，也没有补上非局域相关。精确交换能不能修正 SIE？带着这个问题，我们进入第 12 章：杂化：精确交换能修正什么？

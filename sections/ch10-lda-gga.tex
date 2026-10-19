@@ -1,3 +1,212 @@
+% ============================================================
+% sections/ch10-lda-gga.tex —— 第 10 章 LDA/GGA：密度泛函的前两级阶梯够用吗？
+% 页数配额：6 页（±1）。数值只取自 data/*.csv。
+% ============================================================
+
 \section{LDA/GGA：密度泛函的前两级阶梯够用吗？}
 \label{ch:10:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}$E_\xc$ 泛函未知。\\
+\textbf{本章为什么存在：}用均匀电子气（LDA）与密度梯度（GGA）近似 $E_\xc$，把第 9 章的 KS 框架变成可实际计算的泛函。\\
+\textbf{本章留下的新问题：}仍半局域、自相互作用误差、无色散、带隙低估。
+\end{problemchain}
+
+% ---- 2. 方法卡片 ----
+\begin{methodcard}
+\textbf{方法}：局域密度近似（LDA，ORCA 中为 SVWN5）与广义梯度近似（GGA，以 PBE 为代表）\quad
+\textbf{文献}：\citep{vosko1980,ceperley1980,perdew1981sie,becke1988,lee1988,perdew1996pbe}\\
+\textbf{核心近似}：$E_\xc$ 只依赖局域密度 $\rho(\mathbf r)$（LDA）或再依赖密度梯度 $\nabla\rho(\mathbf r)$（GGA），即半局域近似。\\
+\textbf{关键方程}：式~\eqref{ch:10:eq:gga-enhancement}（PBE 增强因子）\\
+\textbf{ORCA 关键词}：\texttt{! PBE def2-TZVPP TightSCF}（LDA 用 \texttt{! LDA}，ORCA 取 SVWN5）\\
+\textbf{成本标度}：$\mathcal{O}(N^3)$\quad
+\textbf{能否变分 / 尺寸一致}：对给定泛函可变分；尺寸一致且广延。\\
+\textbf{典型失效}：过 binding、无色散、带隙低估；B97-3c 是复合方法，不是新梯级。
+\end{methodcard}
+
+% ---- 3. 正文 ----
+\subsection{均匀电子气与局域密度近似}
+\label{ch:10:sec:lda}
+
+第 9 章把 DFT 的全部困难压缩成一个未知泛函 $E_\xc[\rho]$。最自然的出发点是\textbf{均匀电子气}（uniform electron gas）：电子在均匀正电荷背景中运动，密度处处为常数，交换相关能可以高精度求出。LDA 的假设是：在空间每一点 $\mathbf r$，交换相关能密度等于密度为 $\rho(\mathbf r)$ 的均匀电子气的结果，
+\begin{equation}
+E_\xc^{\mathrm{LDA}}[\rho]
+= \int \rho(\mathbf r)\,\varepsilon_\xc^{\mathrm{unif}}\big(\rho(\mathbf r)\big)\,\dd\mathbf r .
+\label{ch:10:eq:lda-energy}
+\end{equation}
+式~\eqref{ch:10:eq:lda-energy} 只使用一点的密度，因此称为\textbf{局域}近似；对自旋极化的情形，把 $\varepsilon_\xc^{\mathrm{unif}}$ 写成 $\rho_\alpha$ 与 $\rho_\beta$ 的函数即可（LSDA）。实际使用的 SVWN5 由 Slater 交换与 VWN5 相关组成：交换部分取均匀电子气的解析结果，相关部分用 Vosko--Wilk--Nusair 对 Ceperley--Alder 量子蒙特卡罗数据的拟合\citep{vosko1980,ceperley1980,perdew1981sie}。ORCA 的 \texttt{! LDA} 关键词即对应这一组合。
+
+LDA 在均匀或近均匀体系（简单金属、价电子较离域的固体）中表现不错，但分子中的密度远非均匀：原子核附近密度高、化学键区域密度变化剧烈、远尾指数衰减。把每一点当作均匀电子气，等于忽略了这些梯度信息，这正是下一节 GGA 要修补的地方。
+
+\subsection{LDA 交换能与交换势}
+\label{ch:10:sec:lda-exchange}
+
+均匀电子气的交换能密度可以解析求出。对闭壳层体系，
+\begin{equation}
+E_x^{\mathrm{LDA}}[\rho]
+= -C_x\int \rho(\mathbf r)^{4/3}\,\dd\mathbf r,
+\qquad
+C_x=\frac{3}{4}\Big(\frac{3}{\pi}\Big)^{1/3}\approx 0.7386 .
+\label{ch:10:eq:lda-exchange}
+\end{equation}
+式~\eqref{ch:10:eq:lda-exchange} 就是 Slater 交换能；对开壳层体系，把积分拆成自旋分量 $\sum_\sigma\int\rho_\sigma^{4/3}\,\dd\mathbf r$，即 LSDA。它的形式极其简单：交换能只与 $\rho^{4/3}$ 的积分有关，没有任何梯度或非局域信息。
+
+相关部分没有解析闭式，SVWN5 采用 VWN5 参数化。写成自旋极化形式，
+\begin{equation}
+E_c^{\mathrm{LDA}}[\rho_\alpha,\rho_\beta]
+= \int \rho(\mathbf r)\,\varepsilon_c^{\mathrm{VWN}}\big(r_s(\mathbf r),\zeta(\mathbf r)\big)\,\dd\mathbf r,
+\qquad
+r_s=\Big(\frac{3}{4\pi\rho}\Big)^{1/3},
+\quad
+\zeta=\frac{\rho_\alpha-\rho_\beta}{\rho},
+\label{ch:10:eq:lda-correlation}
+\end{equation}
+其中 $r_s$ 是 Wigner--Seitz 半径，$\zeta$ 是自旋极化率。VWN5 在 $r_s\to 0$ 与 $r_s\to\infty$ 的渐近行为之间做插值，并拟合 Ceperley--Alder 的数值结果\citep{vosko1980,ceperley1980}。相关能通常只占总能量的很小一部分，但化学精度要求的正是这一小部分，因此相关泛函的参数化细节很重要。
+
+对式~\eqref{ch:10:eq:lda-exchange} 做泛函导数，得到 LDA 交换势
+\begin{equation}
+v_x^{\mathrm{LDA}}(\mathbf r)
+= \frac{\delta E_x^{\mathrm{LDA}}}{\delta\rho(\mathbf r)}
+= -\frac{4}{3}C_x\,\rho(\mathbf r)^{1/3}.
+\label{ch:10:eq:lda-potential}
+\end{equation}
+式~\eqref{ch:10:eq:lda-potential} 在均匀电子气中是精确的，但用于分子时有一个致命后果：一个电子在自身的库仑势中仍然感受到交换势的抵消不完整，即\textbf{自相互作用误差}（self-interaction error，SIE）。对氢原子，精确的交换相关能应当恰好抵消电子与自身的库仑排斥；LDA 只能抵消一部分，剩余部分使电子过度离域。这个误差会传播到电荷转移能、反应能垒与带隙，是后续杂化泛函（第 12 章）要处理的核心问题。
+
+\subsection{梯度展开与 GGA 交换}
+\label{ch:10:sec:gga}
+
+LDA 忽略密度变化，最直接的改进是把梯度加进来。定义无量纲的约化密度梯度
+\begin{equation}
+s(\mathbf r)=\frac{\lvert\nabla\rho(\mathbf r)\rvert}{2k_F(\mathbf r)\,\rho(\mathbf r)},
+\qquad
+k_F=(3\pi^2\rho)^{1/3},
+\label{ch:10:eq:reduced-gradient}
+\end{equation}
+其中 $k_F$ 是局域费米波矢。$s$ 衡量密度在费米波长尺度上变化的快慢：$s=0$ 对应均匀电子气，$s$ 越大表示越不均匀。GGA 交换能写成
+\begin{equation}
+E_x^{\mathrm{GGA}}[\rho]
+= \int \rho(\mathbf r)\,\varepsilon_x^{\mathrm{unif}}\big(\rho(\mathbf r)\big)\,
+F_x\big(s(\mathbf r)\big)\,\dd\mathbf r ,
+\label{ch:10:eq:gga-exchange}
+\end{equation}
+其中 $\varepsilon_x^{\mathrm{unif}}(\rho)=-C_x\rho^{1/3}$ 是均匀电子气的交换能密度，$F_x(s)$ 称为\textbf{增强因子}（enhancement factor）。式~\eqref{ch:10:eq:gga-exchange} 的结构说明：GGA 仍然以 LDA 为底，只用一个标量函数 $F_x(s)$ 调制它。不同的 GGA 差别几乎全在 $F_x(s)$ 的形状上。
+
+最简单的梯度展开给出 $F_x(s)=1+\mu_{\mathrm{GE}}s^2+\cdots$，其中 $\mu_{\mathrm{GE}}=10/81\approx 0.1235$。这个展开只在小 $s$ 极限可靠；在分子中 $s$ 可以很大，直接截断会破坏交换能的渐近行为。Becke 与 Lee--Yang--Parr 的 GGA 分别从不同经验或约束条件构造 $F_x$ 与相关泛函\citep{becke1988,lee1988}；PBE 则选择尽量满足已知精确约束的形式\citep{perdew1996pbe}。
+
+\subsection{PBE 增强因子与相关泛函}
+\label{ch:10:sec:pbe}
+
+PBE 交换增强因子取一个有理函数形式，
+\begin{equation}
+F_x^{\mathrm{PBE}}(s)
+= 1+\kappa-\frac{\kappa}{1+\mu s^2/\kappa},
+\qquad
+\kappa=0.804,\quad \mu=0.21951 .
+\label{ch:10:eq:gga-enhancement}
+\end{equation}
+式~\eqref{ch:10:eq:gga-enhancement} 的两个参数各有来历：$\mu$ 由线性响应恢复梯度展开系数（PBE 取 $\mu=\beta\pi^2/3$，$\beta=0.066725$），$\kappa$ 控制大 $s$ 的饱和值，使交换能不超过 Lieb--Oxford 上界。它的两个极限是
+\begin{equation}
+\lim_{s\to 0}F_x^{\mathrm{PBE}}(s)=1,
+\qquad
+\lim_{s\to\infty}F_x^{\mathrm{PBE}}(s)=1+\kappa\approx 1.804 .
+\label{ch:10:eq:enhancement-limits}
+\end{equation}
+式~\eqref{ch:10:eq:enhancement-limits} 说明 PBE 在均匀极限回到 LDA，在强不均匀区域饱和而不是发散；这正是它比裸梯度展开稳健的原因。$\kappa$ 与 $\mu$ 不是拟合分子数据得到的，而是由约束确定的，因此 PBE 是一个"非经验"GGA。
+
+PBE 的相关泛函在 LDA 相关能上再加一个梯度修正项：
+\begin{equation}
+\begin{aligned}
+E_c^{\mathrm{PBE}}[\rho]
+&= \int \rho(\mathbf r)\Big[\varepsilon_c^{\mathrm{unif}}\big(r_s,\zeta\big)
++ H\big(r_s,\zeta,t\big)\Big]\,\dd\mathbf r,\\
+H&= \gamma\phi^3\ln\!\left\{1+\frac{\beta}{\gamma}\,t^2\,
+\frac{1+At^2}{1+At^2+A^2t^4}\right\},
+\end{aligned}
+\label{ch:10:eq:pbe-correlation}
+\end{equation}
+其中 $t=\lvert\nabla\rho\rvert/(2\phi k_s\rho)$，$k_s=(4k_F/\pi)^{1/2}$，$\phi=\tfrac12[(1+\zeta)^{2/3}+(1-\zeta)^{2/3}]$，$\gamma=(1-\ln 2)/\pi^2\approx 0.031091$，$A=(\beta/\gamma)[\exp(-\varepsilon_c^{\mathrm{unif}}/(\gamma\phi^3))-1]^{-1}$。式~\eqref{ch:10:eq:pbe-correlation} 保证在 $t\to 0$ 时回到 LDA 相关能，并在大 $t$ 时给出正确的渐近行为。交换与相关合起来，PBE 只有两个可调参数 $\beta$ 与 $\kappa$（后者由约束固定），这也是它被广泛用作默认 GGA 的原因。
+
+\subsection{B97-3c：复合方法，不是新梯级}
+\label{ch:10:sec:b973c}
+
+B97-3c 常被误认为"比 GGA 更高一级的泛函"。事实上它是一个\textbf{复合方法}（composite method）：以 B97 GGA 为电子结构核心，配上内置的 def2-mTZVP 基组、D3(BJ) 色散校正与短程基组（SRB）校正。D3(BJ) 的能量形式为
+\begin{equation}
+E_{D3(\mathrm{BJ})}
+= -\frac12\sum_{A\neq B}\left[
+\frac{s_6\,C_6^{AB}}{R_{AB}^6+(a_1R_{AB}^0+a_2)^6}
++\frac{s_8\,C_8^{AB}}{R_{AB}^8+(a_1R_{AB}^0+a_2)^8}
+\right],
+\label{ch:10:eq:d3bj}
+\end{equation}
+其中 $C_6^{AB}$、$C_8^{AB}$ 是原子对色散系数，$R_{AB}^0$ 是截断半径，$a_1,a_2$ 是阻尼参数\citep{grimme2010d3,grimme2011d3bj}。式~\eqref{ch:10:eq:d3bj} 是纯几何的加和，不改变 KS 方程，只把长程相关以经验方式补回。
+
+于是 B97-3c 的总能可示意为
+\begin{equation}
+E_{\mathrm{B97}\text{-}\mathrm{3c}}
+= E_\xc^{\mathrm{B97}}[\rho]
++ E_{D3(\mathrm{BJ})}
++ E_{\mathrm{SRB}}
++ E_{\mathrm{nuc}},
+\label{ch:10:eq:b973c-energy}
+\end{equation}
+其中 $E_{\mathrm{SRB}}$ 是短程基组校正，用来补偿小基组带来的基组叠加误差；$E_{\mathrm{nuc}}$ 是核排斥能。式~\eqref{ch:10:eq:b973c-energy} 表明 B97-3c 的"3c"指三层校正（功能、基组、色散/短程），而不是雅各布天梯上的第三个梯级。它使用的是内置 def2-mTZVP，不能写成 def2-TZVPP，也不能与同基组的 GGA 逐项比较绝对能量\citep{brandenburg2018b973c}。本书把 B97-3c 放在 GGA 一节讨论，是因为它的电子结构核心仍是 GGA；它是\textbf{复合方法，非新 rung}。
+
+\subsection{数值积分与网格}
+\label{ch:10:sec:grid}
+
+DFT 的交换相关能是三维积分，实际计算用数值求积：
+\begin{equation}
+\int f(\mathbf r)\,\dd\mathbf r
+\approx \sum_i w_i\,f(\mathbf r_i),
+\qquad
+w_i=\sum_A w_{Ai},
+\qquad
+w_{Ai}=\frac{P_A(\mathbf r_i)}{\sum_B P_B(\mathbf r_i)},
+\label{ch:10:eq:grid-quadrature}
+\end{equation}
+其中 $P_A$ 是以原子 $A$ 为中心的权重函数。式~\eqref{ch:10:eq:grid-quadrature} 就是 Becke 分块（fuzzy cells）：把分子空间划分成以各原子为中心的模糊胞，再在每个胞内用径向--角向网格积分。径向常用 Gauss--Chebyshev 或 Euler--Maclaurin 变换，角向常用 Lebedev 网格。LDA 与 GGA 的被积函数较平滑，中等网格即可收敛；meta-GGA（第 11 章）含动能密度，被积函数对网格更敏感，这是下一章要强调的数值问题。
+
+\subsection{LDA/GGA 的失效模式}
+\label{ch:10:sec:failures}
+
+LDA 与 GGA 的误差有清楚的物理来源，可归纳为四类。第一，\textbf{过度结合（overbinding）}：半局域泛函倾向于把电子云拉得更近，键能偏大、平衡键长偏短；LDA 最明显，GGA 有所改善但仍未根除。第二，\textbf{无色散}：$\rho$ 与 $\nabla\rho$ 都是局域量，无法描述两个远离分子间的长程相关，稀有气体二聚体与 $\pi$--$\pi$ 堆积在纯 GGA 下几乎不结合；式~\eqref{ch:10:eq:d3bj} 的 D3 校正正是为此加入的经验补丁。第三，\textbf{带隙低估}：精确 $E_\xc$ 在粒子数改变时存在导数不连续，半局域泛函把它抹平，导致 HOMO--LUMO 隙偏小；SIE 又使电子过度离域，进一步压低带隙。第四，\textbf{自相互作用误差}：式~\eqref{ch:10:eq:lda-potential} 的交换势不能完全抵消电子与自身的库仑作用，造成电荷转移能与反应能垒的系统误差。
+
+这些失效不是"参数没调好"，而是半局域近似的结构性限制：只使用 $\rho$ 与 $\nabla\rho$ 的泛函无法同时满足所有精确约束。沿雅各布天梯上行有两条路：加入动能密度 $\tau$（第 11 章 meta-GGA），或混入精确交换（第 12 章杂化）。两条路都只能缓解、不能消除 SIE；彻底处理非局域相关需要双杂化（第 13 章）或波函数方法。
+
+% ---- 4. CH4 结果框 ----
+\begin{ch4box}
+CH$_4$ 单点，ORCA 关键词分别为 \texttt{! LDA def2-TZVPP TightSCF}、\texttt{! PBE def2-TZVPP TightSCF} 与 \texttt{! B97-3c TightSCF}。表~\ref{ch:10:tab:ch4} 给出三个泛函的总能与相对 CCSD(T)/def2-TZVPP 的偏差。
+
+\begin{center}
+\small
+\begin{tabular}{@{}llrr@{}}
+\toprule
+方法 & 基组 & $E$ / Eh & $\Delta E$ / (kcal·mol$^{-1}$) \\
+\midrule
+SVWN5（LDA） & def2-TZVPP & $-40.117774$ & $+201.32$ \\
+PBE（GGA）   & def2-TZVPP & $-40.464324$ & $-16.14$ \\
+B97-3c       & def2-mTZVP（内置） & $-40.497380$ & $-36.89$ \\
+\midrule
+CCSD(T)（参考） & def2-TZVPP & $-40.438598$ & $0.00$ \\
+\bottomrule
+\end{tabular}
+\captionof{table}{CH$_4$/def2-TZVPP 下 SVWN5、PBE 与 B97-3c 的总能及相对 CCSD(T) 的偏差；B97-3c 使用内置 def2-mTZVP。}
+\label{ch:10:tab:ch4}
+\end{center}
+
+以 PBE 为例，$\Delta E=(-40.464324+40.438598)\times 627.509474=-16.14$\,kcal·mol$^{-1}$；用未舍入的 CSV 能量计算得 $-16.143346$。SVWN5 的 $+201.32$ 与 B97-3c 的 $-36.89$ 同理由 CSV 精确值换算。B97-3c 使用内置 def2-mTZVP 并含 D3(BJ) 与 SRB 校正，因此它的 $\Delta E$ 同时包含泛函、基组与色散修正的贡献，不能解释为"B97-3c 比 PBE 更准"。
+\end{ch4box}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{把总能量更低当作更准}：PBE 的 $-40.464324$\,Eh 比 CCSD(T) 低约 $0.0257$\,Eh，这是泛函的系统偏移；$\Delta E$ 的正负号只表示相对参考的高低，不表示"更好"。
+  \item \textbf{把 B97-3c 当作新梯级}：B97-3c 是 GGA + 内置基组 + D3(BJ)/SRB 的复合方法，不是雅各布天梯的第三级；把它与 def2-TZVPP 的 PBE 直接比较总能量会混淆基组效应。
+  \item \textbf{用粗网格评估 meta-GGA}：式~\eqref{ch:10:eq:grid-quadrature} 的求积误差在 LDA/GGA 上较小，但对含 $\tau$ 的泛函可能达到 kcal·mol$^{-1}$ 量级；换泛函时必须同时检查网格。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+本章沿雅各布天梯爬了前两级。LDA 把每一点的交换相关能取为均匀电子气的结果，见式~\eqref{ch:10:eq:lda-energy}；交换能由式~\eqref{ch:10:eq:lda-exchange} 给出；相关能用 VWN5 参数化，见式~\eqref{ch:10:eq:lda-correlation}；交换势为式~\eqref{ch:10:eq:lda-potential}。GGA 引入约化梯度 $s$，见式~\eqref{ch:10:eq:reduced-gradient}；它用增强因子调制 LDA 交换，见式~\eqref{ch:10:eq:gga-exchange}。PBE 的 $F_x(s)$ 由式~\eqref{ch:10:eq:gga-enhancement} 给出，极限由式~\eqref{ch:10:eq:enhancement-limits} 固定，相关修正为式~\eqref{ch:10:eq:pbe-correlation}。B97-3c 是复合方法而非新梯级，其总能量见式~\eqref{ch:10:eq:b973c-energy}，其中包含 GGA、内置基组与 D3(BJ)（式~\eqref{ch:10:eq:d3bj}）。数值实现依赖式~\eqref{ch:10:eq:grid-quadrature} 的网格求积。遗憾的是，LDA/GGA 仍是半局域泛函：SIE、缺色散与带隙低估都还在。能不能只再加一个局域量——动能密度——就把这些问题改善？带着这个问题，我们进入第 11 章：meta-GGA：加入动能密度能解决什么？
