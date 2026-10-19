@@ -1,3 +1,259 @@
+% ============================================================
+% sections/ch03-hf.tex —— 第 3 章 HF：平均场能走多远？
+% 页数配额：6 页（±1）。数值只取自 data/*.csv。
+% ============================================================
+
 \section{HF：平均场能走多远？}
 \label{ch:03:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}多体方程不可解，需要可计算近似。\\
+\textbf{本章为什么存在：}用独立电子近似与反对称波函数，把多体问题化为可自洽求解的单电子平均场问题。\\
+\textbf{本章留下的新问题：}平均场近似丢掉了电子瞬时回避，HF 缺少动态相关能。
+\end{problemchain}
+
+% ---- 2. 方法卡片 ----
+\begin{methodcard}
+\textbf{方法}：哈特里--福克（Hartree--Fock，HF）\quad
+\textbf{文献}：\citep{szabo1996,helgaker2000}\\
+\textbf{核心近似}：单个斯莱特行列式 + 平均场；电子只感受其余电子的平均排斥\\
+\textbf{关键方程}：式~\eqref{ch:03:eq:hf-energy}（HF 能量）\\
+\textbf{ORCA 关键词}：\texttt{! HF def2-TZVPP TightSCF}\\
+\textbf{成本标度}：$\mathcal{O}(N^4)$ \quad
+\textbf{能否变分 / 尺寸一致}：是\,/\,是\\
+\textbf{典型失效}：键解离、色散作用、带隙（以及开壳层的自旋污染）
+\end{methodcard}
+
+% ---- 3. 正文 ----
+\subsection{平均场近似与独立电子模型}
+\label{ch:03:sec:mean-field}
+
+第 2 章式~\eqref{ch:02:eq:el-hamiltonian} 的电子哈密顿算符可以写成单电子部分与电子--电子排斥之和：
+\begin{equation}
+\op{H}
+= \sum_i \op{h}(i) + \sum_{i<j}\frac{1}{r_{ij}},
+\qquad
+\op{h}(i)
+= -\frac{1}{2}\nabla_i^2 - \sum_A \frac{Z_A}{r_{Ai}} .
+\label{ch:03:eq:h-electronic}
+\end{equation}
+式~\eqref{ch:03:eq:h-electronic} 中 $\op{h}(i)$ 只依赖第 $i$ 个电子的坐标，而 $1/r_{ij}$ 同时依赖两个电子，正是它让方程不能分离变量。HF 的核心思想是把瞬时排斥替换为平均场：每个电子在其他电子形成的平均电荷分布中独立运动。于是 $N$ 电子耦合问题化为 $N$ 个互相耦合的单电子问题。
+
+独立电子模型最朴素的波函数是轨道乘积 $\prod_i\psi_i(\mathbf{x}_i)$，但乘积不满足第 2 章式~\eqref{ch:02:eq:antisymmetry} 的反对称性。把轨道排成式~\eqref{ch:02:eq:slater} 的斯莱特行列式 $\Phi_0$，反对称性自动满足，同时保持"每个电子占据一个自旋轨道"的独立电子图像。代价有两个：其一，电子只能感受平均场，瞬时回避（动态相关）被丢掉；其二，若直接把轨道能量相加，每一对电子间的排斥会被重复计算，因此后面的能量公式必须带 $1/2$ 因子。
+
+\subsection{从斯莱特行列式推导 HF 能量}
+\label{ch:03:sec:hf-derivation}
+
+把 $\Phi_0$ 作为试探函数，HF 能量是哈密顿算符的期望值
+$E_\HF=\bracket{\Phi_0|\op{H}|\Phi_0}$。计算它需要两类积分。单电子积分与双电子积分（化学家记号）定义为
+\begin{equation}
+h_{pq} = \int \psi_p^*(\mathbf{x})\,\op{h}(\mathbf{x})\,\psi_q(\mathbf{x})\,\dd\mathbf{x},
+\qquad
+(pq|rs)
+= \iint \psi_p^*(\mathbf{x}_1)\psi_q(\mathbf{x}_1)\,
+\frac{1}{r_{12}}\,
+\psi_r^*(\mathbf{x}_2)\psi_s(\mathbf{x}_2)\,
+\dd\mathbf{x}_1\dd\mathbf{x}_2 .
+\label{ch:03:eq:integrals}
+\end{equation}
+式~\eqref{ch:03:eq:integrals} 中 $\mathbf{x}=(\mathbf{r},\sigma)$ 同时含空间与自旋坐标；双电子积分的指标顺序是"电子 1 的两个轨道在前、电子 2 的两个轨道在后"。
+
+将行列式展开后，只有两类项存活：每个电子与自身单电子算符的贡献 $h_{ii}$，以及每对占据轨道之间的库仑与交换贡献。以两电子为例，
+$E=h_{11}+h_{22}+(11|22)-(12|21)$；推广到 $N$ 个电子并对每对电子只计一次，得到
+\begin{equation}
+E_\HF
+= \sum_i h_{ii}
++ \frac{1}{2}\sum_{ij}\big[(ii|jj)-(ij|ji)\big].
+\label{ch:03:eq:hf-energy}
+\end{equation}
+式~\eqref{ch:03:eq:hf-energy} 是本章的中心结果。第一项是单电子能（动能加核吸引），第二项是电子--电子相互作用；$1/2$ 保证每对电子只计一次，方括号中的负号来自行列式的反对称性。若省略交换项 $-(ij|ji)$，式~\eqref{ch:03:eq:hf-energy} 退化为 Hartree 平均场，会高估电子排斥并犯自相互作用错误。
+
+以两电子闭壳层体系为例可以看清各项来源。把两个空间轨道 $\phi_1$、$\phi_2$ 各放一对自旋相反的电子，展开行列式后只有 $h_{11}+h_{22}$ 与 $(11|22)-(12|21)$ 存活；用自旋轨道语言写，库仑与交换贡献正是 $J_{12}-K_{12}$。推广到 $N$ 电子，每一对占据轨道的贡献形式相同，$1/2\sum_{ij}$ 是不重复计数的唯一写法。交换项只在同自旋电子之间出现，因此闭壳层中每对轨道贡献一个 $K$，这也是 HF 能量能写成式~\eqref{ch:03:eq:hf-energy} 这一简洁形式的原因。
+
+\subsection{库仑积分、交换积分与福克算符}
+\label{ch:03:sec:fock}
+
+把式~\eqref{ch:03:eq:hf-energy} 中的两类双电子项命名为
+\begin{equation}
+J_{ij} = (ii|jj),
+\qquad
+K_{ij} = (ij|ji).
+\label{ch:03:eq:jk-integrals}
+\end{equation}
+$J_{ij}$ 是式~\eqref{ch:03:eq:jk-integrals} 中的库仑积分（Coulomb integral）：它等于两个电荷云 $|\psi_i|^2$ 与 $|\psi_j|^2$ 之间的经典静电排斥。$K_{ij}$ 是交换积分（exchange integral），没有经典对应；由于自旋函数正交，$K_{ij}$ 只在 $\psi_i$ 与 $\psi_j$ 自旋相同时非零。交换项还保证 $J_{ii}-K_{ii}=0$：一个电子不会与自身的电荷云排斥。
+
+为了把式~\eqref{ch:03:eq:hf-energy} 写成单电子本征值问题，定义作用在任意函数 $f$ 上的库仑算符与交换算符
+\begin{equation}
+\op{J}_j(1)f(1)
+= \left[\int \frac{|\psi_j(2)|^2}{r_{12}}\,\dd\mathbf{x}_2\right] f(1),
+\qquad
+\op{K}_j(1)f(1)
+= \left[\int \frac{\psi_j^*(2)f(2)}{r_{12}}\,\dd\mathbf{x}_2\right]\psi_j(1).
+\label{ch:03:eq:jk-operators}
+\end{equation}
+式~\eqref{ch:03:eq:jk-operators} 显示：$\op{J}_j$ 是局域的乘法算符，$\op{K}_j$ 是非局域的积分算符——后者正是交换效应的量子来源。把单电子部分与所有占据轨道的平均场相加，得到福克算符（Fock operator）
+\begin{equation}
+\op{F}(1)
+= \op{h}(1) + \sum_j^{occ}\big[\op{J}_j(1)-\op{K}_j(1)\big].
+\label{ch:03:eq:fock}
+\end{equation}
+式~\eqref{ch:03:eq:fock} 中的 $\op{F}$ 依赖占据轨道，因此 HF 方程是自洽的：解出的轨道又决定算符本身。
+
+单个轨道的能量是 $\op{F}$ 的期望值
+\begin{equation}
+\varepsilon_i
+= h_{ii} + \sum_j^{occ}\big(J_{ij}-K_{ij}\big).
+\label{ch:03:eq:orbital-energy}
+\end{equation}
+把式~\eqref{ch:03:eq:orbital-energy} 对占据轨道求和会重复计算每一对相互作用，所以总能量不是 $\sum_i\varepsilon_i$，而是
+\begin{equation}
+E_\HF = \frac{1}{2}\sum_i^{occ}\big(h_{ii}+\varepsilon_i\big).
+\label{ch:03:eq:energy-from-eps}
+\end{equation}
+式~\eqref{ch:03:eq:energy-from-eps} 与式~\eqref{ch:03:eq:hf-energy} 等价，是程序输出总能量时实际使用的形式。
+
+\subsection{正则 HF 方程、Roothaan--Hall 方程与 SCF 迭代}
+\label{ch:03:sec:roothaan}
+
+在轨道正交归一约束 $\braket{\psi_i|\psi_j}=\delta_{ij}$ 下对式~\eqref{ch:03:eq:hf-energy} 变分，得到正则 HF 方程
+\begin{equation}
+\op{F}\psi_i = \varepsilon_i\psi_i .
+\label{ch:03:eq:canonical}
+\end{equation}
+式~\eqref{ch:03:eq:canonical} 形式上是一个单电子本征值方程，但 $\op{F}$ 由占据轨道构成，必须迭代求解。实际计算把空间轨道按第 2 章式~\eqref{ch:02:eq:basis-expansion} 展开为原子轨道，并引入闭壳层密度矩阵
+\begin{equation}
+P_{\mu\nu} = 2\sum_i^{occ} C_{\mu i}C_{\nu i},
+\label{ch:03:eq:density-matrix}
+\end{equation}
+式~\eqref{ch:03:eq:density-matrix} 中的因子 2 来自每个空间轨道容纳一对自旋相反的电子。代入式~\eqref{ch:03:eq:fock} 得到 Fock 矩阵
+\begin{equation}
+F_{\mu\nu}
+= h_{\mu\nu}
++ \sum_{\lambda\sigma} P_{\lambda\sigma}
+\left[(\mu\nu|\lambda\sigma)
+- \frac{1}{2}(\mu\lambda|\nu\sigma)\right],
+\label{ch:03:eq:fock-matrix}
+\end{equation}
+其中 $1/2$ 只乘交换型积分。把式~\eqref{ch:03:eq:canonical} 投影到基组上，即得 Roothaan--Hall 方程
+\begin{equation}
+\mathbf{F}\mathbf{C} = \mathbf{S}\mathbf{C}\boldsymbol{\varepsilon},
+\label{ch:03:eq:roothaan-hall}
+\end{equation}
+其中 $\mathbf{S}$ 是基函数重叠矩阵，$\mathbf{C}$ 是轨道系数矩阵，$\boldsymbol{\varepsilon}$ 是对角化的轨道能矩阵。式~\eqref{ch:03:eq:roothaan-hall} 是一个广义本征值问题；由于 $\mathbf{F}$ 通过式~\eqref{ch:03:eq:fock-matrix} 依赖 $\mathbf{P}$，而 $\mathbf{P}$ 又由 $\mathbf{C}$ 构成，必须自洽迭代：
+\begin{equation}
+\mathbf{P}^{(n)}
+\;\longrightarrow\;
+\mathbf{F}^{(n)}
+\;\longrightarrow\;
+\mathbf{F}^{(n)}\mathbf{C}^{(n+1)}
+= \mathbf{S}\mathbf{C}^{(n+1)}\boldsymbol{\varepsilon}^{(n+1)}
+\;\longrightarrow\;
+\mathbf{P}^{(n+1)},
+\label{ch:03:eq:scf-cycle}
+\end{equation}
+直到 $\max_{\mu\nu}|P_{\mu\nu}^{(n+1)}-P_{\mu\nu}^{(n)}|$ 或总能量变化小于阈值。式~\eqref{ch:03:eq:scf-cycle} 就是自洽场（self-consistent field，SCF）循环；实际程序用 DIIS 等外推加速收敛。每轮迭代的主要成本是构造式~\eqref{ch:03:eq:fock-matrix} 中的四指标积分，标度为 $\mathcal{O}(N^4)$，这也是 HF 成为中等体系常规工具的原因。
+
+SCF 的收敛行为值得单独强调。式~\eqref{ch:03:eq:roothaan-hall} 是广义本征值问题，且 $\mathbf{F}$ 随密度变化，因此解是非线性的，可能存在多个自洽解。典型体系的 SCF 在十几到几十轮内收敛；但过渡金属、拉伸键、近简并体系可能出现振荡、缓慢收敛或收敛到能量较高的解。此时需要更好的初始猜测、能级移动、阻尼或二阶 SCF 方法，并在收敛后检查能量梯度与稳定性。由于 $\mathbf{S}$ 不是单位矩阵，程序通常先做正交化变换再对角化 $\mathbf{F}$，每轮对角化的成本为 $\mathcal{O}(N^3)$，低于积分的 $\mathcal{O}(N^4)$；对更大体系，积分筛除与 RI-J 近似可进一步降低前置因子。
+
+\subsection{RHF、UHF、ROHF 与自旋污染}
+\label{ch:03:sec:spin}
+
+上面的推导默认每个空间轨道被一对自旋相反的电子占据，称为限制性 HF（restricted HF，RHF）。对开壳层体系，至少有两种处理。非限制性 HF（unrestricted HF，UHF）让 $\alpha$ 与 $\beta$ 电子使用不同的空间轨道，Fock 算符也分成两个：
+\begin{equation}
+\op{F}^{\sigma}
+= \op{h} + \sum_j^{occ}\op{J}_j - \sum_j^{\sigma}\op{K}_j,
+\qquad \sigma=\alpha,\beta .
+\label{ch:03:eq:fock-uhf}
+\end{equation}
+式~\eqref{ch:03:eq:fock-uhf} 中库仑项对全部占据轨道求和，交换项只对同自旋轨道求和，这与式~\eqref{ch:03:eq:jk-integrals} 的讨论一致。UHF 能正确描述解离极限，但它的波函数不再是总自旋平方算符 $\op{S}^2$ 的本征函数。自旋污染用
+\begin{equation}
+\langle S^2\rangle
+= S(S+1) + N_\beta
+- \sum_i^{N_\alpha}\sum_j^{N_\beta}
+\left|\braket{\psi_i^\alpha|\psi_j^\beta}\right|^2
+\label{ch:03:eq:s2}
+\end{equation}
+度量，其中 $N_\alpha\ge N_\beta$。式~\eqref{ch:03:eq:s2} 的理想值对双重态是 $S(S+1)=0.75$；若 $\alpha$ 与 $\beta$ 空间轨道完全重合，式~\eqref{ch:03:eq:s2} 退化为 0.75，自旋污染为零。偏离 0.75 越多，波函数混入的高自旋成分越多。
+
+限制性开壳层 HF（restricted open-shell HF，ROHF）用一套空间轨道并施加自旋约束，$\langle S^2\rangle$ 正确，但轨道能不再有 Koopmans 定理那样的简单解释。三种变体的取舍见表~\ref{ch:03:tab:variants}；更详细的轨道选择与自旋态讨论见 Jensen 的教材\citep{jensen2017}。
+
+\begin{table}[t]
+\centering
+\small
+\caption{RHF、UHF、ROHF 的轨道与自旋行为对比。}\label{ch:03:tab:variants}
+\begin{tabular}{@{}l p{3.7cm} p{4.2cm} p{3.4cm}@{}}
+\toprule
+变体 & 空间轨道 & 自旋本征函数 & 适用 / 代价 \\
+\midrule
+RHF & $\alpha$、$\beta$ 共用一套 & 纯单重态 & 闭壳层；不能正确解离 \\
+UHF & $\alpha$、$\beta$ 各一套 & 可能混入更高自旋态 & 开壳层、解离；自旋污染 \\
+ROHF & 一套，加自旋约束 & 近似纯自旋态 & 高自旋开壳层；轨道能解释弱 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{库普曼斯定理}
+\label{ch:03:sec:koopmans}
+
+HF 轨道能有一个近似物理解释。假设从占据轨道 $k$ 移走一个电子，其余轨道完全不变（冻结轨道近似），则电离能（ionization potential，IP）为
+\begin{equation}
+\mathrm{IP}_k
+= E^{N-1}_k - E^{N}
+\approx -\varepsilon_k .
+\label{ch:03:eq:koopmans}
+\end{equation}
+式~\eqref{ch:03:eq:koopmans} 即库普曼斯定理（Koopmans' theorem）\citep{koopmans1934}：占据轨道能近似等于负的电离能。类似地，向虚轨道 $a$ 加一个电子，电子亲和能（electron affinity，EA）近似为
+\begin{equation}
+\mathrm{EA}_a
+= E^{N} - E^{N+1}_a
+\approx -\varepsilon_a .
+\label{ch:03:eq:koopmans-ea}
+\end{equation}
+式~\eqref{ch:03:eq:koopmans} 与式~\eqref{ch:03:eq:koopmans-ea} 的误差来自两方面：冻结轨道忽略了电离后的轨道弛豫（使 IP 偏大），而 HF 缺少相关能（使 IP 偏小），两者常部分抵消。因此 Koopmans 定理对外层价电子较好，对芯电子、阴离子和强弛豫体系不可靠。
+
+\subsection{HF 的失效模式}
+\label{ch:03:sec:failures}
+
+HF 的失效都源于同一个缺口：平均场不含瞬时相关。三类典型情形如下。
+
+\textbf{键解离。}以 H$_2$ 为例，RHF 在 $R\to\infty$ 时仍把两个电子放在同一个成键空间轨道上，波函数包含等量的"共价"与"离子"成分，解离极限能量远高于两个氢原子之和。UHF 允许 $\alpha$、$\beta$ 轨道分离，能量在解离极限正确，但 $\langle S^2\rangle$ 从 0 升向 1，自旋污染严重。第 7 章 H$_2^-$ 势能曲线会再次遇到这个问题。
+
+\textbf{色散作用。}两个闭壳层分子的瞬时偶极耦合给出 $-C_6/R^6$ 吸引，而 HF 只有平均场，两个无重叠的闭壳层片段之间没有吸引。稀有气体二聚体、$\pi$ 堆积、层间作用都必须靠相关方法或色散校正。
+
+\textbf{带隙。}HF 的 HOMO--LUMO 能隙通常远大于实验光学带隙，因为占据轨道能因缺少弛豫而偏低、虚轨道能因缺少相关而偏高。CH$_4$ 的 HF/def2-TZVPP 能隙为 $18.9211$\,eV，远高于通常的化学激发能；它反映的是 HF 单粒子谱的刚性，而不是真实光学带隙。
+
+HF 仍是几乎所有波函数方法的起点：它给出一个定义良好的单行列式参考、一套正交轨道和 $\mathcal{O}(N^4)$ 的成本。问题不在于 HF 是否"错"，而在于它把哪一部分物理留给了下一层方法。
+
+HF 的失效程度可以量化。用第 2 章的相关能定义，CH$_4$ 的 HF 误差 $+140.68$\,kcal·mol$^{-1}$ 全部是相关能；对弱相互作用体系，HF 缺失的色散吸引可达相互作用能的几十个百分点。判断参考态是否可靠，常看三个量：HOMO--LUMO 能隙（是否近简并）、自然轨道占据数（是否偏离 0/2，第 2 章式~\eqref{ch:02:eq:natural-orbital}）、以及开壳层下的 $\langle S^2\rangle$（是否污染，式~\eqref{ch:03:eq:s2}）。三者都正常时，HF 仍是一个合格的单参考起点；否则应直接考虑多参考方法，而不是在坏参考上继续加相关修正。
+
+% ---- 4. CH4 结果框 ----
+\begin{ch4box}
+CH$_4$/def2-TZVPP，ORCA 关键词 \texttt{! HF def2-TZVPP TightSCF}：
+\[
+E_\HF = -40.214415\ \mathrm{Eh},
+\qquad
+E_{\mathrm{CCSD(T)}} = -40.438598\ \mathrm{Eh}.
+\]
+\begin{align*}
+\Delta E_\HF
+&= \big(E_\HF - E_{\mathrm{CCSD(T)}}\big)\times 627.509474 \\
+&= \big(-40.214415 + 40.438598\big)\times 627.509474 \\
+&= 0.224183\times 627.509474
+= +140.68\ \mathrm{kcal\cdot mol^{-1}}.
+\end{align*}
+HF 的 HOMO--LUMO 能隙为 $18.9211$\,eV（$0.695338$\,Eh）。$+140.68$\,kcal·mol$^{-1}$ 几乎全部是 HF 缺失的相关能，这就是下一章要补的量。
+\end{ch4box}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{漏掉式~\eqref{ch:03:eq:hf-energy} 的 $1/2$}：每对电子在双重求和中被计两次；漏掉 $1/2$ 会把电子排斥放大约一倍。
+  \item \textbf{把交换积分当成经典相互作用}：$K_{ij}$（式~\eqref{ch:03:eq:jk-integrals}）来自行列式反对称性，只作用于同自旋电子，没有经典对应；它也不是"磁相互作用"。
+  \item \textbf{把 UHF 轨道能直接当电离能}：自旋污染大时（式~\eqref{ch:03:eq:s2} 明显偏离理想值），$\varepsilon_i$ 已不是好的 IP 估计，须区分 $\alpha$、$\beta$ 轨道并检查 $\langle S^2\rangle$。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+本章把多体问题化为平均场：单斯莱特行列式给出 HF 能量式~\eqref{ch:03:eq:hf-energy}，其中库仑项与交换项分别由式~\eqref{ch:03:eq:jk-integrals} 定义；福克算符式~\eqref{ch:03:eq:fock} 把能量条件写成正则方程~\eqref{ch:03:eq:canonical}，再经 Roothaan--Hall 方程~\eqref{ch:03:eq:roothaan-hall} 与 SCF 循环~\eqref{ch:03:eq:scf-cycle} 数值求解。HF 是变分的、尺寸一致的，成本 $\mathcal{O}(N^4)$；它给出可用的轨道与 Koopmans 电离能，却系统性地缺少动态相关，在解离、色散与带隙上失效。CH$_4$ 的 HF 能量比 CCSD(T) 高 $140.68$\,kcal·mol$^{-1}$，这个缺口就是相关能。带着这个问题，我们进入第 4 章：MP2：HF 缺失的相关能怎么补？

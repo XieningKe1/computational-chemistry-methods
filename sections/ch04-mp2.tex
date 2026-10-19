@@ -1,3 +1,237 @@
+% ============================================================
+% sections/ch04-mp2.tex —— 第 4 章 MP2：HF 缺失的相关能怎么补？
+% 页数配额：6 页（±1）。数值只取自 data/*.csv。
+% ============================================================
+
 \section{MP2：HF 缺失的相关能怎么补？}
 \label{ch:04:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}HF 缺动态相关能。\\
+\textbf{本章为什么存在：}以 HF 为参考，用 Rayleigh--Schrödinger 微扰论在二阶补回动态相关。\\
+\textbf{本章留下的新问题：}参考态差时微扰级数发散，且 MP2 非变分。
+\end{problemchain}
+
+% ---- 2. 方法卡片 ----
+\begin{methodcard}
+\textbf{方法}：二阶 Møller--Plesset 微扰（second-order Møller--Plesset perturbation theory，MP2）\quad
+\textbf{文献}：\citep{moller1934,grimme2003scsmp2}\\
+\textbf{核心近似}：以 HF 单行列式为参考，只保留微扰展开的二阶项\\
+\textbf{关键方程}：式~\eqref{ch:04:eq:mp2-energy}（自旋轨道 MP2 能量）\\
+\textbf{ORCA 关键词}：\texttt{! MP2 def2-TZVPP TightSCF}\\
+\textbf{成本标度}：$\mathcal{O}(N^5)$ \quad
+\textbf{能否变分 / 尺寸一致}：否\,/\,是\\
+\textbf{典型失效}：强相关、近简并、非变分
+\end{methodcard}
+
+% ---- 3. 正文 ----
+\subsection{相关能的定义与 MP2 的位置}
+\label{ch:04:sec:corr}
+
+第 2 章式~\eqref{ch:02:eq:corr-energy} 把相关能定义为精确能量与 HF 能量之差，$E_{\mathrm{corr}}=E_{\mathrm{exact}}-E_\HF$。HF 在平均场意义下已经最优，但它只有一个行列式，无法描述电子因瞬时排斥而互相回避。MP2 的全部任务，就是用微扰论算出这个差值的主要部分：
+\begin{equation}
+E_{\mathrm{MP2}} = E_\HF + E^{(2)},
+\qquad
+E_{\mathrm{corr}}^{\mathrm{MP2}}
+= E_{\mathrm{MP2}} - E_\HF = E^{(2)} .
+\label{ch:04:eq:mp2-total}
+\end{equation}
+式~\eqref{ch:04:eq:mp2-total} 表明 MP2 不是一个新的变分 Ansatz，而是在 HF 参考上追加一个能量修正。它保持 HF 的单参考图像，因此擅长动态相关，对静态相关无能为力；它也继承 HF 的尺寸一致性，因为式~\eqref{ch:04:eq:mp2-total} 中的二阶修正可以按片段相加。
+
+\subsection{Rayleigh--Schrödinger 微扰理论}
+\label{ch:04:sec:rspt}
+
+微扰论的起点是把哈密顿算符分成可解部分与小微扰：
+\begin{equation}
+\op{H} = \op{H}_0 + \lambda\op{V},
+\label{ch:04:eq:partition}
+\end{equation}
+其中 $\lambda$ 是式~\eqref{ch:04:eq:partition} 中的形式耦合常数，最后取 $\lambda=1$。设 $\op{H}_0$ 的本征函数与能量为 $\Phi_n$、$E_n^{(0)}$，把能量与本征函数按 $\lambda$ 展开：
+\begin{equation}
+E = E_0^{(0)} + \lambda E^{(1)} + \lambda^2 E^{(2)} + \cdots,
+\qquad
+\Psi = \Phi_0 + \lambda\Psi^{(1)} + \lambda^2\Psi^{(2)} + \cdots .
+\label{ch:04:eq:rs-expansion}
+\end{equation}
+式~\eqref{ch:04:eq:rs-expansion} 采用中间归一化 $\braket{\Phi_0|\Psi}=1$。代入 $\op{H}\Psi=E\Psi$ 并按 $\lambda$ 的幂次比较，一阶能量修正为微扰在参考态上的期望值
+\begin{equation}
+E^{(1)} = \bracket{\Phi_0|\op{V}|\Phi_0},
+\label{ch:04:eq:e1}
+\end{equation}
+二阶能量修正为
+\begin{equation}
+E^{(2)}
+= \sum_{n\ne 0}
+\frac{\left|\bracket{\Phi_n|\op{V}|\Phi_0}\right|^2}
+{E_0^{(0)} - E_n^{(0)}} .
+\label{ch:04:eq:rs-e2}
+\end{equation}
+式~\eqref{ch:04:eq:rs-e2} 的分母是参考态与激发态的无微扰能量差。对基态，$E_0^{(0)}<E_n^{(0)}$，分母为负，因此每个非零矩阵元都给出负的二阶修正——这正是相关能降低总能量的来源。若某个激发态与参考态近简并，分母趋近于零，式~\eqref{ch:04:eq:rs-e2} 发散；这是后文 MP2 失效的数学根源。
+
+\subsection{Møller--Plesset 划分}
+\label{ch:04:sec:mp-partition}
+
+Rayleigh--Schrödinger 理论对任意划分都成立，Møller 与 Plesset 的选择是让 $\op{H}_0$ 等于第 3 章福克算符式~\eqref{ch:03:eq:fock} 之和\citep{moller1934}：
+\begin{equation}
+\op{H}_0 = \sum_i \op{F}(i),
+\qquad
+\op{V} = \op{H} - \op{H}_0
+= \sum_{i<j}\frac{1}{r_{ij}} - \sum_i \op{v}_\HF(i),
+\label{ch:04:eq:mp-h0}
+\end{equation}
+其中 $\op{v}_\HF$ 是式~\eqref{ch:03:eq:fock} 中平均场部分。这样 $\op{H}_0$ 的本征函数就是 HF 轨道构成的斯莱特行列式，参考态 $\Phi_0$ 满足
+$\op{H}_0\Phi_0=E_0^{(0)}\Phi_0$，且 $E_0^{(0)}=\sum_i^{occ}\varepsilon_i$。对双激发行列式 $\Phi_{ij}^{ab}$（$i,j$ 占据，$a,b$ 虚），
+\begin{equation}
+\op{H}_0\Phi_{ij}^{ab}
+= \big(E_0^{(0)}+\varepsilon_a+\varepsilon_b-\varepsilon_i-\varepsilon_j\big)
+\Phi_{ij}^{ab} .
+\label{ch:04:eq:mp-denominator}
+\end{equation}
+由式~\eqref{ch:04:eq:mp-denominator}，式~\eqref{ch:04:eq:rs-e2} 的分母化为
+$E_0^{(0)}-E_n^{(0)}=\varepsilon_i+\varepsilon_j-\varepsilon_a-\varepsilon_b$。这个量通常为负，且对低激发特别小。
+
+一阶修正式~\eqref{ch:04:eq:e1} 在 MP 划分下正好补回 HF 能量：
+\begin{equation}
+E^{(1)}
+= \bracket{\Phi_0|\op{V}|\Phi_0}
+= -\frac{1}{2}\sum_{ij}^{occ}\bracket{ij||ij},
+\qquad
+E_\HF = E_0^{(0)} + E^{(1)} .
+\label{ch:04:eq:mp1}
+\end{equation}
+式~\eqref{ch:04:eq:mp1} 说明 MP 微扰从二阶才开始偏离 HF；因此“MP1”就是 HF，真正的新物理在 $E^{(2)}$。
+
+\subsection{MP2 能量公式}
+\label{ch:04:sec:mp2-energy}
+
+由于 $\op{V}$ 是双电子算符，式~\eqref{ch:04:eq:rs-e2} 中只有双激发行列式给出非零矩阵元。用反对称化双电子积分
+$\bracket{ij||ab}=\bracket{ij|ab}-\bracket{ij|ba}=(ia|jb)-(ib|ja)$，自旋轨道形式的 MP2 能量为
+\begin{equation}
+E^{(2)}
+= \frac{1}{4}
+\sum_{ij}^{occ}\sum_{ab}^{vir}
+\frac{\left|\bracket{ij||ab}\right|^2}
+{\varepsilon_i+\varepsilon_j-\varepsilon_a-\varepsilon_b} .
+\label{ch:04:eq:mp2-energy}
+\end{equation}
+式~\eqref{ch:04:eq:mp2-energy} 中的 $1/4$ 来自 $i,j$ 与 $a,b$ 两组指标的独立求和：每个物理上的双激发被计了四次。分母是式~\eqref{ch:04:eq:mp-denominator} 的能量差，分子是反对称化矩阵元的平方，因此每一项都是负的。
+
+对闭壳层体系，把自旋求和显式做掉，式~\eqref{ch:04:eq:mp2-energy} 化为空间轨道形式
+\begin{equation}
+E^{(2)}
+= \sum_{ij}^{occ}\sum_{ab}^{vir}
+\frac{(ia|jb)\big[2(ia|jb)-(ib|ja)\big]}
+{\varepsilon_i+\varepsilon_j-\varepsilon_a-\varepsilon_b} .
+\label{ch:04:eq:mp2-closed}
+\end{equation}
+式~\eqref{ch:04:eq:mp2-closed} 的分子中，$2(ia|jb)$ 来自自旋相反的库仑型贡献，$-(ib|ja)$ 来自同自旋的交换贡献；因子 2 与式~\eqref{ch:04:eq:mp2-energy} 的 $1/4$ 并不矛盾，它是自旋求和的自然结果。若体系是开壳层，必须回到式~\eqref{ch:04:eq:mp2-energy} 或使用自旋分辨的公式，不能直接把式~\eqref{ch:04:eq:mp2-closed} 套用。
+
+把自旋求和写出来可以验证式~\eqref{ch:04:eq:mp2-closed} 的因子。固定四个空间指标 $i,j,a,b$，自旋轨道形式式~\eqref{ch:04:eq:mp2-energy} 给出四种非零自旋组合：两个全同自旋组合（$\alpha\alpha\to\alpha\alpha$、$\beta\beta\to\beta\beta$）各贡献 $|(ia|jb)-(ib|ja)|^2$，两个反自旋组合各贡献 $(ia|jb)^2$ 或 $(ib|ja)^2$。把四者求和并利用 $a\leftrightarrow b$ 的对称性，$1/4$ 正好化为式~\eqref{ch:04:eq:mp2-closed} 的分子 $2(ia|jb)^2-(ia|jb)(ib|ja)$。这也解释了为什么闭壳层 MP2 的交换项只涉及同自旋部分，而反自旋部分的权重是它的两倍。
+
+MP2 的成本标度为 $\mathcal{O}(N^5)$：四指标积分变换到分子轨道需要 $\mathcal{O}(N^5)$，随后的求和是 $\mathcal{O}(N_{\mathrm{occ}}^2N_{\mathrm{vir}}^2)=\mathcal{O}(N^4)$，但积分变换主导总成本。与 HF 的 $\mathcal{O}(N^4)$ 相比，MP2 只贵一阶，却能补回大部分动态相关，这就是它长期作为“最便宜相关方法”的原因。
+
+\subsection{MP3、MP4 与更高阶}
+\label{ch:04:sec:mp3}
+
+把式~\eqref{ch:04:eq:rs-expansion} 继续展开，就得到 MP3、MP4：
+\begin{equation}
+E_{\mathrm{MP3}} = E_\HF + E^{(2)} + E^{(3)},
+\qquad
+E_{\mathrm{MP4}} = E_{\mathrm{MP3}} + E^{(4)} .
+\label{ch:04:eq:mp3}
+\end{equation}
+式~\eqref{ch:04:eq:mp3} 中 MP3 的成本为 $\mathcal{O}(N^6)$，MP4 为 $\mathcal{O}(N^7)$。阶数越高并不自动越可靠：MP 级数是渐近级数而非收敛级数，在强相关或近简并体系上可能逐阶振荡甚至发散\citep{szabo1996,helgaker2000}。实践中 MP4 的改进有限，而同样 $\mathcal{O}(N^7)$ 的 CCSD(T) 对三体相关与相连簇的处理更系统，因此 MP4 很少作为常规选择；MP2 则因成本低、尺寸一致，成为大体系相关能的首选起点。MP3/MP4 的意义更多在于诊断：若 MP2 与 MP3 相差很大，说明微扰级数不稳定。
+
+\subsection{SCS-MP2、RI-MP2 与 local MP2}
+\label{ch:04:sec:variants}
+
+标准 MP2 对同自旋与反自旋相关一视同仁，但两者误差来源不同。Grimme 提出的自旋分量缩放（spin-component scaling，SCS）把式~\eqref{ch:04:eq:mp2-closed} 拆成反自旋（opposite-spin，OS）与同自旋（same-spin，SS）两部分，并分别缩放\citep{grimme2003scsmp2}：
+\begin{equation}
+E_{\mathrm{SCS\text{-}MP2}}
+= c_{\mathrm{OS}}E^{(2)}_{\mathrm{OS}}
++ c_{\mathrm{SS}}E^{(2)}_{\mathrm{SS}},
+\qquad
+c_{\mathrm{OS}}=\frac{6}{5},\quad c_{\mathrm{SS}}=\frac{1}{3}.
+\label{ch:04:eq:scs-mp2}
+\end{equation}
+式~\eqref{ch:04:eq:scs-mp2} 几乎不增加成本，却显著改善反应能与弱相互作用；它也是后来双杂化泛函中 MP2 项的原型（第 13 章）。
+
+另一个方向是降低积分变换的常数因子。分辨率恒等式（resolution-of-the-identity，RI）用辅助基组把四指标积分分解为三指标积分的乘积：
+\begin{equation}
+(ia|jb) \approx \sum_P B_{ia}^{P}B_{jb}^{P},
+\qquad
+B_{ia}^{P} = \sum_Q (ia|Q)\,(Q|P)^{-1/2},
+\label{ch:04:eq:ri-mp2}
+\end{equation}
+其中 $P,Q$ 是辅助基组指标。式~\eqref{ch:04:eq:ri-mp2} 把积分变换从四指标降到三指标，RI-MP2 的渐近标度仍是 $\mathcal{O}(N^5)$，但前置因子可降低一个数量级以上，是现代 MP2 计算的默认实现。local MP2 则利用电子相关的短程性，把占据轨道局域化、把虚空间限制在配对轨道的投影原子轨道（projected atomic orbital，PAO）邻域内，对大分子可接近线性标度\citep{jensen2017}。表~\ref{ch:04:tab:variants} 汇总了这些 MP2 变体。
+
+\begin{table}[t]
+\centering
+\small
+\caption{标准 MP2 与三种常用变体的成本与适用场景。}\label{ch:04:tab:variants}
+\begin{tabular}{@{}l p{2.3cm} p{4.6cm} p{3.9cm}@{}}
+\toprule
+变体 & 成本标度 & 关键改动 & 适用 / 代价 \\
+\midrule
+MP2（式~\eqref{ch:04:eq:mp2-closed}） & $\mathcal{O}(N^5)$ & 反自旋与同自旋等权 & 常规单参考；弱相互作用偏弱 \\
+SCS-MP2（式~\eqref{ch:04:eq:scs-mp2}） & $\mathcal{O}(N^5)$ & 自旋分量分别缩放 & 反应能、弱相互作用更好；经验参数 \\
+RI-MP2（式~\eqref{ch:04:eq:ri-mp2}） & $\mathcal{O}(N^5)$ & 三指标积分 + 辅助基组 & 降低前置因子；引入 RI 误差 \\
+local MP2 & 接近 $\mathcal{O}(N)$ & 局域占据 + PAO 虚空间 & 大分子可行；截断引入误差 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{MP2 的失效模式}
+\label{ch:04:sec:failures}
+
+MP2 的失效可以追溯到式~\eqref{ch:04:eq:mp2-energy} 的分母与参考态质量。
+
+\textbf{近简并与强静态相关。}当某个双激发与参考态近简并时，$\varepsilon_i+\varepsilon_j-\varepsilon_a-\varepsilon_b$ 趋近于零，式~\eqref{ch:04:eq:mp2-energy} 的修正爆炸。键拉伸、双自由基、过渡金属配合物、H$_2^-$ 解离都属于这一类；这时需要多参考方法（第 7--8 章），而不是加大基组或提高 MP 阶数。
+
+\textbf{参考态自旋污染。}MP2 以 HF 行列式为参考。若开壳层体系用 UHF 参考且 $\langle S^2\rangle$ 远离理想值（第 3 章式~\eqref{ch:03:eq:s2}），参考态本身已混入高自旋成分，MP2 修正建立在错误的零阶波函数上。此时应改用 ROHF 参考或自旋限制的开壳层方法。
+
+\textbf{非变分性。}式~\eqref{ch:04:eq:mp2-total} 不是变分能量，$E_{\mathrm{MP2}}$ 没有“精确能量上界”的含义；它可能高于或低于精确值。因此不能用 MP2 能量去论证“已经足够接近真值”，只能与更高阶方法或实验比较。
+
+\textbf{基组与 BSSE。}MP2 的相关能对基组很敏感，弱相互作用中 BSSE 尤其显著（第 2 章式~\eqref{ch:02:eq:bsse}）。RI-MP2 的辅助基组误差通常小于主基组误差，但不能消除 BSSE。
+
+判断一个 MP2 结果是否可信，有几个廉价诊断：开壳层下检查 $\langle S^2\rangle$，多参考倾向下检查自然轨道占据数，比较 MP2 与 MP3 的能量差（式~\eqref{ch:04:eq:mp3}），以及检查 HOMO--LUMO 能隙是否过小。若 MP2 与 MP3 相差数 kcal·mol$^{-1}$，或参考态本身近简并，MP2 的数值不应直接作为结论，而应在同类小体系上用 CCSD(T) 标定后再外推。这一“先验证参考态、再看微扰级数”的顺序，是使用所有单参考相关方法的前提。
+
+CH$_4$ 是 MP2 的理想场景：平衡构型、单参考、闭壳层。MP2 补回的相关能为 $-0.197684$\,Eh，占总相关能 $0.224183$\,Eh 的约 $88.2\%$，剩余误差 $16.63$\,kcal·mol$^{-1}$ 主要来自高阶相关与基组不完备。这个“补回大部分、但不够”的画像，正是下一章 CI 要系统改进的起点。
+
+% ---- 4. CH4 结果框 ----
+\begin{ch4box}
+CH$_4$/def2-TZVPP，ORCA 关键词 \texttt{! MP2 def2-TZVPP TightSCF}：
+\[
+E_{\mathrm{MP2}} = -40.412099\ \mathrm{Eh},
+\qquad
+E_\HF = -40.214415\ \mathrm{Eh}.
+\]
+\[
+E_{\mathrm{corr}}
+= E_{\mathrm{MP2}} - E_\HF
+= -40.412099 - (-40.214415)
+= -0.197684\ \mathrm{Eh}.
+\]
+\begin{align*}
+\Delta E_{\mathrm{MP2}}
+&= \big(E_{\mathrm{MP2}} - E_{\mathrm{CCSD(T)}}\big)\times 627.509474 \\
+&= \big(-40.412099 + 40.438598\big)\times 627.509474 \\
+&= 0.026499\times 627.509474
+= +16.63\ \mathrm{kcal\cdot mol^{-1}}.
+\end{align*}
+MP2 把 HF 的 $+140.68$\,kcal·mol$^{-1}$ 误差降到 $+16.63$\,kcal·mol$^{-1}$，但 MP2 是非变分的：这个能量不是精确能量的上界。
+\end{ch4box}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{分母符号写反}：式~\eqref{ch:04:eq:mp2-energy} 的分母是 $\varepsilon_i+\varepsilon_j-\varepsilon_a-\varepsilon_b$，对基态为负；写成 $\varepsilon_a+\varepsilon_b-\varepsilon_i-\varepsilon_j$ 会得到正的相关能。
+  \item \textbf{自旋案例重复计数}：自旋轨道式~\eqref{ch:04:eq:mp2-energy} 带 $1/4$；转到闭壳层式~\eqref{ch:04:eq:mp2-closed} 后不再额外乘 $1/2$，分子中的因子 2 已包含自旋求和。混用两套公式会把相关能算错倍数。
+  \item \textbf{在坏参考上硬用 MP2}：$\langle S^2\rangle$ 明显偏离理想值或体系近简并时，式~\eqref{ch:04:eq:rs-e2} 的小分母会让 MP2 不可靠；此时应换参考或多参考方法，而不是继续加基组。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+MP2 用 Rayleigh--Schrödinger 微扰论在 HF 参考上补二阶相关：MP 划分式~\eqref{ch:04:eq:mp-h0} 让零阶问题可解，一阶式~\eqref{ch:04:eq:mp1} 还原 HF，二阶式~\eqref{ch:04:eq:mp2-energy} 给出自旋轨道求和，闭壳层形式式~\eqref{ch:04:eq:mp2-closed} 是实际程序的出发式。它尺寸一致、成本 $\mathcal{O}(N^5)$，对 CH$_4$ 把误差从 $140.68$ 降到 $16.63$\,kcal·mol$^{-1}$；但它非变分，且在近简并、强静态相关或自旋污染参考上会发散。MP2 只加“双激发”的二阶项，能不能把单、双、三、四激发系统性地都加进来，并保持尺寸一致性？带着这个问题，我们进入第 5 章：CI：能不能系统地加激发组态？
