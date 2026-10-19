@@ -1,3 +1,216 @@
+% ============================================================
+% sections/ch09-dft.tex —— 第 9 章 DFT：能不能不写波函数？
+% 页数配额：6 页（±1）。数值只取自 data/*.csv。
+% ============================================================
+
 \section{DFT：能不能不写波函数？}
 \label{ch:09:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}多参考路线成本高。\\
+\textbf{本章为什么存在：}Hohenberg--Kohn 定理证明密度足以决定一切，Kohn--Sham 方程把密度问题变回可计算的单电子方程。\\
+\textbf{本章留下的新问题：}$E_\xc$ 泛函未知。
+\end{problemchain}
+
+% ---- 2. 方法卡片 ----
+\begin{methodcard}
+\textbf{方法}：密度泛函理论（density-functional theory，DFT）/ Kohn--Sham（KS）\quad
+\textbf{文献}：\citep{hohenberg1964,kohn1965,parr1989}\\
+\textbf{核心近似}：交换相关泛函 $E_\xc[\rho]$ 的精确形式未知，必须近似；除此以外 KS 框架在原理上是精确的\\
+\textbf{关键方程}：式~\eqref{ch:09:eq:ks-equation}（KS 轨道方程）\\
+\textbf{ORCA 关键词}：\texttt{! PBE def2-TZVPP TightSCF}\\
+\textbf{成本标度}：$\mathcal{O}(N^3)$–$\mathcal{O}(N^4)$ \quad
+\textbf{能否变分 / 尺寸一致}：对给定泛函，KS 能量对密度变分；半局域泛函尺寸一致且广延\\
+\textbf{典型失效}：自相互作用误差（SIE）、缺色散、带隙低估、强静态相关
+\end{methodcard}
+
+% ---- 3. 正文 ----
+\subsection{Hohenberg--Kohn 定理}
+\label{ch:09:sec:hk}
+
+过去八章我们一直在和多电子波函数打交道，而波函数有 $4N$ 个变量。1964 年，Hohenberg 与 Kohn 证明：基态电子密度 $\rho(\mathbf{r})$ 只有三个空间坐标，却携带了决定基态性质的全部信息\citep{hohenberg1964,parr1989}。第一条定理（HK1）断言外部势与基态密度之间存在一一对应（至多相差一个常数）：
+\begin{equation}
+\rho_0(\mathbf{r}) \;\longleftrightarrow\; v_{\mathrm{ext}}(\mathbf{r}) + \text{const}.
+\label{ch:09:eq:hk1}
+\end{equation}
+既然 $v_{\mathrm{ext}}$（进而整个电子哈密顿算符）由 $\rho_0$ 唯一决定，系统的基态能量就是密度的泛函 $E = E[\rho]$，不需要写出波函数。
+
+HK1 可用反证法理解。假设两个相差非常数的外势 $v$ 与 $v'$ 给出同一基态密度 $\rho_0$，对应基态能量 $E$、$E'$ 与基态 $\Psi$、$\Psi'$。把 $\Psi'$ 当作真实哈密顿算符 $\op{H}$ 的试探函数，由变分原理
+$E < \bracket{\Psi'|\op{H}|\Psi'} = E' + \int (v-v')\rho_0\,\dd\mathbf{r}$；
+反过来把 $\Psi$ 当作 $\op{H}'$ 的试探函数，
+$E' < E - \int (v-v')\rho_0\,\dd\mathbf{r}$。两式相加得 $E + E' < E + E'$，矛盾。故式~\eqref{ch:09:eq:hk1} 成立。
+
+第二条定理（HK2）给出变分原理：对任意合法的试探密度（满足粒子数守恒），能量泛函在真实基态密度处取最小值，
+\begin{equation}
+E[\rho] \ge E[\rho_0] = E_0,
+\qquad \int \rho(\mathbf{r})\,\dd\mathbf{r} = N .
+\label{ch:09:eq:hk2}
+\end{equation}
+式~\eqref{ch:09:eq:hk2} 与第 2 章式~\eqref{ch:02:eq:variational} 的波函数变分原理形式相通，但变量换成了密度。HK 定理只保证 $E[\rho]$ 存在，并未给出它的显式形式，这正是后文"$E_\xc$ 未知"的根源。
+
+\subsection{Levy 约束搜索}
+\label{ch:09:sec:levy}
+
+HK 原始证明假设了 $v$ 可表示性（density 来自某个外势的基态），这在数学上过于严格。Levy 用约束搜索（constrained search）给出了更稳健的定义\citep{parr1989}：给定任意 $N$ 可表示密度 $\rho$，在所有产生该密度的反对称波函数中取动能与电子--电子排斥的期望最小值，得到普适泛函
+\begin{equation}
+F[\rho] = \min_{\Psi \to \rho} \bracket{\Psi|\op{T}+\op{V}_{ee}|\Psi}.
+\label{ch:09:eq:levy}
+\end{equation}
+$F[\rho]$ 与具体外势无关，是密度的普适泛函。加上外势项即得能量泛函
+\begin{equation}
+E[\rho] = F[\rho] + \int v_{\mathrm{ext}}(\mathbf{r})\,\rho(\mathbf{r})\,\dd\mathbf{r}.
+\label{ch:09:eq:energy-functional}
+\end{equation}
+式~\eqref{ch:09:eq:levy} 把"$\rho$ 由哪个波函数来"的模糊性消解为一次显式最小化，使 HK 定理不再依赖 $v$ 可表示性假设。它同时说明：密度泛函理论在原理上精确，唯一的困难是 $F[\rho]$（尤其是其中的交换相关部分）没有简单闭式。
+
+\subsection{Kohn--Sham 方程}
+\label{ch:09:sec:ks}
+
+直接用 $\rho$ 做变分仍然困难，因为 $F[\rho]$ 里的动能项未知。Kohn 与 Sham 的做法是引入一个辅助的\textbf{无相互作用}参考系统\citep{kohn1965,parr1989}：用 $N$ 个单电子轨道构造与真实系统相同的密度
+\begin{equation}
+\rho(\mathbf{r}) = \sum_{i}^{\mathrm{occ}} \lvert \phi_i(\mathbf{r})\rvert^2,
+\label{ch:09:eq:ks-density}
+\end{equation}
+并对这些轨道做能量最小化。结果是一组类 Hartree--Fock 的单电子方程
+\begin{equation}
+\Big[-\frac{1}{2}\nabla^2 + v_s(\mathbf{r})\Big]\phi_i(\mathbf{r})
+= \varepsilon_i\,\phi_i(\mathbf{r}),
+\qquad
+v_s(\mathbf{r}) = v_{\mathrm{ext}}(\mathbf{r}) + v_{\mathrm H}(\mathbf{r}) + v_\xc(\mathbf{r}),
+\label{ch:09:eq:ks-equation}
+\end{equation}
+其中 $v_{\mathrm H}(\mathbf{r}) = \int \rho(\mathbf{r}')/\lvert \mathbf{r}-\mathbf{r}'\rvert\,\dd\mathbf{r}'$ 是经典库仑项，$v_\xc$ 是交换相关势。式~\eqref{ch:09:eq:ks-equation} 与 HF 方程结构相同，但 $v_s$ 包含了全部交换与相关效应。方程必须自洽求解：$\phi_i \to \rho \to v_s \to \phi_i$ 循环，直到收敛。
+
+KS 能量泛函可写成
+\begin{equation}
+E_{\mathrm{KS}}[\rho]
+= T_s[\rho] + \int v_{\mathrm{ext}}(\mathbf{r})\,\rho(\mathbf{r})\,\dd\mathbf{r}
++ J[\rho] + E_\xc[\rho].
+\label{ch:09:eq:ks-energy}
+\end{equation}
+对 $\rho$ 变分并施加式~\eqref{ch:09:eq:ks-density} 的轨道约束，就得到式~\eqref{ch:09:eq:ks-equation} 中的三个势：$v_{\mathrm{ext}}$ 来自外势项，$v_{\mathrm H} = \delta J/\delta\rho$ 是经典库仑势，$v_\xc = \delta E_\xc/\delta\rho$ 把其余全部效应打包。式~\eqref{ch:09:eq:ks-energy} 说明：KS 框架本身不引入近似，唯一的近似只发生在 $E_\xc$ 的具体形式上。
+
+把真实系统的动能 $T[\rho]$ 与电子--电子排斥 $V_{ee}[\rho]$ 同无相互作用参考的对应量逐项比较，可定义交换相关泛函
+\begin{equation}
+E_\xc[\rho] = T[\rho] - T_s[\rho] + V_{ee}[\rho] - J[\rho],
+\label{ch:09:eq:exc-def}
+\end{equation}
+其中 $J[\rho] = \tfrac12\iint \rho(\mathbf{r})\rho(\mathbf{r}')/\lvert \mathbf{r}-\mathbf{r}'\rvert\,\dd\mathbf{r}\,\dd\mathbf{r}'$ 是经典库仑能，$T_s$ 是无相互作用动能。$E_\xc$ 吸收了真实动能与无相互作用动能之差、以及所有非经典交换与相关。势与泛函的关系是泛函导数
+\begin{equation}
+v_\xc(\mathbf{r}) = \frac{\delta E_\xc[\rho]}{\delta \rho(\mathbf{r})}.
+\label{ch:09:eq:vxc}
+\end{equation}
+式~\eqref{ch:09:eq:exc-def} 与式~\eqref{ch:09:eq:vxc} 说明：一旦选定 $E_\xc$，KS 框架就是完全确定的；DFT 的所有近似都集中在这一个泛函上。
+
+\subsection{交换相关泛函与交换相关穴}
+\label{ch:09:sec:xc}
+
+$E_\xc$ 的物理内容可用交换相关穴（exchange-correlation hole）$\rho_\xc(\mathbf{r},\mathbf{r}')$ 理解：它描述在 $\mathbf{r}$ 处发现一个电子时，$\mathbf{r}'$ 处电子密度的减少。穴满足严格的求和规则\citep{burke2012}
+\begin{equation}
+\int \rho_\xc(\mathbf{r},\mathbf{r}')\,\dd\mathbf{r}' = -1 .
+\label{ch:09:eq:xc-hole}
+\end{equation}
+式~\eqref{ch:09:eq:xc-hole} 源自每个电子恰好排除一个电子的电荷守恒，是构造与检验近似泛函的重要约束：好的近似应当尽量满足它。
+
+交换相关能可进一步拆成交换与相关两部分
+\begin{equation}
+E_\xc[\rho] = E_x[\rho] + E_c[\rho],
+\label{ch:09:eq:exc-split}
+\end{equation}
+交换 $E_x$（式~\eqref{ch:09:eq:exc-split}）来自反对称性，与 HF 的交换积分同源；相关 $E_c$ 来自电子瞬时回避。半局域近似最常见的三种失效都源于把式~\eqref{ch:09:eq:exc-def} 近似化：近似 $E_\xc$ 不满足式~\eqref{ch:09:eq:xc-hole} 的精确约束，导致\textbf{自相互作用误差}（self-interaction error，SIE）——电子与自身库仑作用未被完全抵消，突出表现为电荷转移能与过渡态能垒的误差；缺少长程非局域相关，导致\textbf{色散}（van der Waals）作用描述不足；交换势的渐近行为错误，导致\textbf{带隙低估}。
+
+写不出精确 $E_\xc$，只能构造近似。最朴素的起点是局域密度近似（local density approximation，LDA）：把每个点的 $E_\xc$ 看成密度等于该点值的均匀电子气结果\citep{vosko1980}。以此为第一级，逐级加入更多密度信息即得雅各布天梯（第 \S\ref{ch:09:sec:ladder} 节）。这一条阶梯构成第 10--13 章的主线。
+
+\subsection{绝热连接}
+\label{ch:09:sec:ac}
+
+$E_\xc$ 还有一个形式上精确的表达。考虑一族耦合强度 $\lambda \in [0,1]$ 的哈密顿算符
+$\op{H}_\lambda = \op{T} + \op{V}_{ee} + \sum_i v_\lambda(\mathbf{r}_i)$，
+并调节 $v_\lambda$ 使基态密度对一切 $\lambda$ 都保持为同一个 $\rho$。当 $\lambda = 0$ 时退化为无相互作用 KS 系统，$\lambda = 1$ 时回到真实系统。绝热连接（adiabatic connection）给出\citep{burke2012}
+\begin{equation}
+E_\xc[\rho]
+= \int_0^1 \dd\lambda\, \bracket{\Psi_\lambda|\op{V}_{ee}|\Psi_\lambda} - J[\rho],
+\label{ch:09:eq:ac}
+\end{equation}
+其中 $\Psi_\lambda$ 是 $\op{H}_\lambda$ 的基态。式~\eqref{ch:09:eq:ac} 把交换相关能写成"电子--电子排斥期望沿耦合强度的积分减去经典库仑项"，它是杂化泛函（第 12 章）与双杂化泛函（第 13 章）的理论依据：不同的 $\lambda$ 区间近似对应不同的物理。
+
+式~\eqref{ch:09:eq:ac} 提供了理解各级泛函的统一视角：LDA/GGA 用局部量近似被积函数，杂化把 $\lambda = 1$（真实系统）附近的精确交换权重显式混入，双杂化进一步加入 $\lambda > 0$ 的非局域（MP2 型）贡献。第 12、13 章会反复回到式~\eqref{ch:09:eq:ac}。
+
+\subsection{雅各布天梯概览}
+\label{ch:09:sec:ladder}
+
+把对 $E_\xc$ 的近似按"使用了多少密度信息"排列，就是 Perdew 的雅各布天梯（Jacob's ladder）\citep{burke2012}：每上一级加入一类新的局部量，见图~\ref{ch:09:fig:ladder}。五个梯级分别是
+
+\begin{enumerate}
+  \item \textbf{LDA}：只用 $\rho(\mathbf{r})$，基于均匀电子气\citep{vosko1980}（第 10 章）。
+  \item \textbf{GGA}：加入密度梯度 $\nabla\rho$，以 PBE 为代表\citep{perdew1996pbe}（第 10 章）。
+  \item \textbf{meta-GGA}：再加入动能密度 $\tau$（与等轨道指示器 $\alpha$），代表有 TPSS\citep{tao2003}、SCAN\citep{sun2015scan}、r\textsuperscript{2}SCAN\citep{furness2020r2scan}（第 11 章）。
+  \item \textbf{hybrid}：混入部分精确交换，代表 B3LYP\citep{becke1993b3lyp,lee1988}、PBE0\citep{adamo1999pbe0}、$\omega$B97M-V\citep{mardirossian2016wb97mv}（第 12 章）。
+  \item \textbf{double hybrid}：再加入未占据轨道的 MP2 微扰项，代表 B2PLYP\citep{grimme2006b2plyp}、PWPB95\citep{goerigk2011pwpb95}（第 13 章）。
+\end{enumerate}
+
+需要强调，天梯是"信息层级"而非"精度保证"：某些 meta-GGA 经过仔细设计可以胜过粗糙的杂化，正如第 1 章三轴分析所说，方法好坏要相对于所问问题判断。梯级之上的 B97-3c\citep{brandenburg2018b973c} 与 r\textsuperscript{2}SCAN-3c\citep{grimme2021r2scan3c} 是经验复合方法（泛函 + 内置基组 + 色散校正），不是新梯级。
+
+沿天梯上行，代价是每一级都增加局部量的计算量与数值稳定性要求；收益则取决于体系类型。经验上，GGA 对固体与表面友好，meta-GGA 与杂化对主族分子热化学更准，范围分离杂化对电荷转移与激发态更可靠，双杂化在弱相互作用与反应能上进一步改善。本书的 17 行表（第 1 章表~\ref{ch:01:tab:methods}）把这一层次与成本标度并列，方便按问题选级。
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  rung/.style={draw=oiBlue, thick, fill=oiBlue!8, rounded corners=1.5pt,
+               inner sep=3pt, minimum width=3.1cm, minimum height=0.55cm, align=center},
+  add/.style={font=\footnotesize, align=left, anchor=west}
+]
+  % 两根导轨
+  \draw[line width=1.4pt, oiBlue!50] (-0.2,0) -- (-0.2,6.0);
+  \draw[line width=1.4pt, oiBlue!50] (3.3,0) -- (3.3,6.0);
+  % 五个横档
+  \node[rung] (r1) at (1.55,0.7)  {LDA};
+  \node[rung] (r2) at (1.55,1.95) {GGA};
+  \node[rung] (r3) at (1.55,3.2)  {meta-GGA};
+  \node[rung] (r4) at (1.55,4.45) {hybrid};
+  \node[rung] (r5) at (1.55,5.7)  {double hybrid};
+  % 每级新增的信息
+  \node[add] at (3.5,0.7)  {只含 $\rho(\mathbf{r})$（半局域）};
+  \node[add] at (3.5,1.95) {加入 $\nabla\rho$};
+  \node[add] at (3.5,3.2)  {加入动能密度 $\tau$、$\alpha$};
+  \node[add] at (3.5,4.45) {混入精确交换};
+  \node[add] at (3.5,5.7)  {再加入 MP2 微扰项};
+  % 精度/成本方向
+  \draw[-{Stealth[length=2mm]}, thick, draw=black!55] (-0.75,0)--(-0.75,6.0)
+        node[midway,left,font=\footnotesize,align=center]{精度\\成本};
+\end{tikzpicture}
+\caption{雅各布天梯。五个梯级自下而上依次加入密度梯度、动能密度、精确交换与 MP2 微扰项。每一级只增加一类局部信息，但精度提升不是自动的。}
+\label{ch:09:fig:ladder}
+\end{figure}
+
+% ---- 4. CH4 结果框 ----
+\begin{ch4box}
+CH$_4$/def2-TZVPP，ORCA 关键词 \texttt{! PBE def2-TZVPP TightSCF}：
+\[
+E_{\mathrm{PBE}} = -40.464324\ \mathrm{Eh}, \qquad
+E_{\mathrm{CCSD(T)}} = -40.438598\ \mathrm{Eh}.
+\]
+\[
+\Delta E
+= \big(E_{\mathrm{PBE}} - E_{\mathrm{CCSD(T)}}\big)\times 627.509474
+= \big(-40.464324 -(-40.438598)\big)\times 627.509474
+= (-0.025726)\times 627.509474
+= -16.14\ \mathrm{kcal\cdot mol^{-1}}.
+\]
+用未舍入的 CSV 能量 $-40.464323928376$\,Eh 与 $-40.438597868462$\,Eh 计算，得 $\Delta E = -16.143346 \approx -16.14$\,kcal·mol$^{-1}$。PBE 能量比 CCSD(T) 参考低 16.14\,kcal·mol$^{-1}$——这是泛函的系统误差，不是"PBE 更精确"。
+\end{ch4box}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{把 $E_\xc$ 当作可观测物理量}：$E_\xc$ 是为了让无相互作用参考复现真实密度而定义的"打包量"（式~\eqref{ch:09:eq:exc-def}），没有直接的实验对应，只能整体检验其后果。
+  \item \textbf{把不同泛函的总能量放在同一绝对标尺上比较}：不同泛函对动能/交换/相关的划分不同，总能量绝对值不可比，只能比同泛函下的能量差（如式~\eqref{ch:09:eq:hk2} 的 $\Delta E$）。
+  \item \textbf{指望 KS-DFT 修好强静态相关}：标准半局域泛函和全局杂化在多组态体系（拉伸键、双自由基）上系统性失败；这类问题需要第 7--8 章的多参考方法。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+本章回答了两个问题。第一，"能不能不写波函数？"——能：HK 定理（式~\eqref{ch:09:eq:hk1}、\eqref{ch:09:eq:hk2}）与 Levy 约束搜索（式~\eqref{ch:09:eq:levy}、\eqref{ch:09:eq:energy-functional}）表明密度 $\rho(\mathbf{r})$ 承载了全部信息，KS 方程（式~\eqref{ch:09:eq:ks-equation}）把它变成可计算的单电子问题；绝热连接（式~\eqref{ch:09:eq:ac}）提供了 $E_\xc$ 的精确形式。第二，"代价是什么？"——所有近似都集中在未知的交换相关泛函 $E_\xc$（式~\eqref{ch:09:eq:exc-def}），其势由式~\eqref{ch:09:eq:vxc} 给出。泛函怎么造？从雅各布天梯最底部的均匀电子气出发最自然：$E_\xc$ 泛函究竟未知到什么程度，LDA 与 GGA 这两级够不够用？带着这个问题，我们进入第 10 章：LDA/GGA：密度泛函前两级够用吗？

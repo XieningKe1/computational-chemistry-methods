@@ -1,3 +1,173 @@
+% ============================================================
+% sections/ch01-overview.tex —— 第 1 章 计算化学到底在解什么问题？
+% 页数配额：4 页（±1）。数值只取自 data/*.csv。
+% ============================================================
+
 \section{计算化学到底在解什么问题？}
 \label{ch:01:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}——（全书起点，无前置章）。\\
+\textbf{本章为什么存在：}建立方法地图。我们从固定核构型的多体电子方程出发，把量子化学方法分成四大家族，并说明每一个方法相对上一级"多解决了一个什么问题"。\\
+\textbf{本章留下的新问题：}多体薛定谔方程不能直接解——为什么不能？
+\end{problemchain}
+
+% ---- 2. 正文 ----
+\subsection{从多体薛定谔方程到四类方法}
+\label{ch:01:sec:four-families}
+
+化学问题最终都归结为一个固定原子核构型下的电子方程。分子中 $N$ 个电子，每个电子带三个空间坐标和一个自旋坐标，精确波函数 $\Psi$ 因此是一个 $4N$ 元函数。把它写下来已经昂贵，把它精确解出来更昂贵：维度随电子数指数增长。整个计算化学的历史，就是寻找"在给定精度目标下把成本压到可接受"的不同近似路径\citep{szabo1996,jensen2017}。
+
+这些路径被组织成四大家族：
+
+\begin{enumerate}
+  \item \textbf{波函数方法}（wavefunction-based）：显式写出并求解多电子波函数 $\Psi$。从平均场近似（Hartree--Fock，HF）开始，逐级加入电子相关：MP2（二阶微扰）、CI（组态相互作用）、CC（耦合簇），再到处理强静态相关的多参考路线 CASSCF、CASPT2/NEVPT2、MRCI\citep{szabo1996,helgaker2000}。
+  \item \textbf{密度泛函理论}（density-functional theory，DFT）：放弃 $4N$ 元波函数，改用只有三个空间坐标的电子密度 $\rho(\mathbf{r})$。Kohn--Sham 方程把问题重新变回类单电子方程，代价是交换相关泛函 $E_\xc$ 必须近似\citep{parr1989}。
+  \item \textbf{半经验方法 / 紧束缚}（semiempirical / tight-binding）：保留电子和轨道图像，但把大量双电子积分参数化、只处理价电子。GFN2-xTB 是本书代表，它带自洽电荷（SCC）\citep{bannwarth2019gfn2}。
+  \item \textbf{分子力场}（force field）：彻底去掉电子，用经典势能面描述原子间相互作用——键伸缩、角弯曲、二面角（键合项）加上 Lennard-Jones 与库仑（非键合项）。GFN-FF、UFF、AMBER、CHARMM、OPLS-AA 都属于这一类\citep{spicher2020gfnff,rappe1992uff,cornell1995amber,jorgensen1996oplsaa}。
+\end{enumerate}
+
+四大家族的关系不是"谁替代谁"，而是"覆盖不同的规模与精度需求"。图~\ref{ch:01:fig:map} 给出全书的方法地图：左侧波函数路线自 HF 逐级加相关，右侧 DFT 路线沿雅各布天梯逐级加非局域信息，两条路线最终都在大规模端收敛到 xTB 与力场。这张地图是后续每一章的坐标：每个方法都回答"我比上一级多解决了什么"。
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  wf/.style={draw=oiBlue, thick, rounded corners=1.5pt, fill=oiBlue!6,
+             inner sep=3pt, align=center, minimum width=2.5cm, minimum height=0.6cm},
+  dft/.style={draw=oiGreen, thick, rounded corners=1.5pt, fill=oiGreen!6,
+              inner sep=3pt, align=center, minimum width=2.5cm, minimum height=0.6cm},
+  low/.style={draw=oiVermillion, thick, rounded corners=1.5pt, fill=oiVermillion!8,
+              inner sep=4pt, align=center, minimum width=4.0cm, minimum height=0.75cm},
+  ar/.style={-{Stealth[length=2mm]}, thick, draw=black!70},
+  lab/.style={font=\small\bfseries}
+]
+  % ---- 波函数路线（左） ----
+  \node[wf] (hf)     at (0,7.2) {HF};
+  \node[wf] (mp2)    at (0,6.0) {MP2};
+  \node[wf] (ci)     at (0,4.8) {CI};
+  \node[wf] (cc)     at (0,3.6) {CC};
+  \node[wf] (casscf) at (0,2.4) {CASSCF};
+  \node[wf] (mr)     at (0,1.2) {MRPT / MRCI};
+  % ---- DFT 路线（右） ----
+  \node[dft] (lda)  at (5.4,7.2) {LDA};
+  \node[dft] (gga)  at (5.4,6.0) {GGA};
+  \node[dft] (meta) at (5.4,4.8) {meta-GGA};
+  \node[dft] (hyb)  at (5.4,3.6) {hybrid};
+  \node[dft] (dh)   at (5.4,2.4) {double hybrid};
+  % ---- 大规模端 ----
+  \node[low] (low) at (5.4,-0.35) {GFN2-xTB \,/\, GFN-FF};
+  % ---- 链内箭头 ----
+  \draw[ar] (hf)--(mp2);
+  \draw[ar] (mp2)--(ci);
+  \draw[ar] (ci)--(cc);
+  \draw[ar] (cc)--(casscf);
+  \draw[ar] (casscf)--(mr);
+  \draw[ar] (lda)--(gga);
+  \draw[ar] (gga)--(meta);
+  \draw[ar] (meta)--(hyb);
+  \draw[ar] (hyb)--(dh);
+  % ---- 收敛到 xTB / 力场 ----
+  \draw[ar] (mr.south) -- ++(0,-0.4) -| (low.west);
+  \draw[ar] (dh)--(low);
+  % ---- 列标题 ----
+  \node[lab, color=oiBlue]  at (0,8.15)   {波函数路线};
+  \node[lab, color=oiGreen] at (5.4,8.15) {密度泛函路线};
+  % ---- 成本箭头 ----
+  \draw[ar, draw=black!45] (-1.7,1.2)--(-1.7,7.2)
+        node[midway,left,font=\footnotesize,align=center]{精度\\成本};
+\end{tikzpicture}
+\caption{全书方法地图。左侧为波函数路线（HF$\to$MP2$\to$CI$\to$CC$\to$CASSCF$\to$多参考微扰\,/\,MRCI），右侧为密度泛函路线（LDA$\to$GGA$\to$meta-GGA$\to$杂化$\to$双杂化），两条路线在大规模端共同收敛到半经验（GFN2-xTB）与力场（GFN-FF）。}
+\label{ch:01:fig:map}
+\end{figure}
+
+\subsection{精度—成本—相关类型}
+\label{ch:01:sec:three-axes}
+
+比较方法时不要只看一个数字。任何方法都可以放在三个轴上衡量：
+
+\begin{itemize}
+  \item \textbf{精度}（accuracy）：相对于参考值的误差，例如 CH$_4$ 相对 CCSD(T)/def2-TZVPP 的能量偏差。
+  \item \textbf{成本}（cost）：随体系规模 $N$ 的标度 $\mathcal{O}(N^n)$，以及常数因子与内存需求。
+  \item \textbf{相关类型}（correlation type）：方法主要处理动态相关（dynamic correlation，电子瞬时回避）还是静态相关（static/nondynamic correlation，近简并组态），或者两者都处理。
+\end{itemize}
+
+"更贵"并不自动等于"更适合所问的问题"。例如 CASSCF 处理 CH$_4$ 这种弱静态相关体系时，能量可能反而比便宜的 MP2 更差（见第 7 章），因为它的活性空间选择与轨道优化是为强静态相关设计的；反之，单参考的 CCSD(T) 在拉伸键、过渡金属多组态问题上会失效，而它在平衡构型附近几乎是金标准。选择方法的正确提法是："这个问题需要的相关类型是哪种？在此类型下，我的精度预算是多少？"三轴的交叉决定了 \S\ref{ch:01:sec:method-table} 表格中每一个方法的存在理由，也决定了第 16 章决策树的走向。
+
+\subsection{方法存在意义表（17 行）}
+\label{ch:01:sec:method-table}
+
+表~\ref{ch:01:tab:methods} 是全书的核心索引：每一行回答"这个方法比上一级多解决了什么问题"，并给出成本标度、尺寸一致性\,/\,广延性、相关类型与本书 CH$_4$ 算例中使用的 ORCA 关键词。关键词列可直接复现 \texttt{runs/ch4/} 下的输入。
+
+{\setlength{\tabcolsep}{4pt}
+\small
+\begin{longtable}{@{}p{1.7cm} p{4.5cm} p{1.2cm} p{2.0cm} p{1.9cm} p{2.2cm}@{}}
+\caption{17 个方法的存在意义、成本标度、尺寸行为、相关类型与 CH$_4$ ORCA 关键词。}\label{ch:01:tab:methods}\\
+\toprule
+方法 & 解决上一级什么问题（存在意义） & 成本标度 & 尺寸一致性\,/\,广延性 & 相关类型 & CH$_4$ ORCA 关键词 \\
+\midrule
+\endfirsthead
+\multicolumn{6}{@{}l}{\small 表~\ref{ch:01:tab:methods}（续）}\\
+\toprule
+方法 & 解决上一级什么问题（存在意义） & 成本标度 & 尺寸一致性\,/\,广延性 & 相关类型 & CH$_4$ ORCA 关键词 \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+HF & 把不可解的多体方程化为可自洽求解的单电子平均场，给出分子轨道与轨道能 & $\mathcal{O}(N^4)$ & 是\,/\,是 & 无（平均场） & \texttt{! HF def2-TZVPP TightSCF} \\
+MP2 & 以二阶微扰补回 HF 缺失的动态相关，是单参考下最便宜的相关方法 & $\mathcal{O}(N^5)$ & 是\,/\,是 & 动态（单参考） & \texttt{! MP2 def2-TZVPP TightSCF} \\
+CISD & 用变分组态展开系统加入单双激发，给出可直接对角化的相关波函数 & $\mathcal{O}(N^6)$ & 否\,/\,否 & 动态为主（截断单参考） & \texttt{! CISD def2-TZVPP TightSCF} \\
+CCSD(T) & 用指数拟设修复截断 CI 的尺寸一致性；非迭代 (T) 项逼近化学精度，常作金标准 & $\mathcal{O}(N^7)$ & 是\,/\,是 & 动态（高精度单参考） & \texttt{! CCSD(T) def2-TZVPP TightSCF} \\
+CASSCF & 一个行列式不够时，用活性空间容纳静态相关，并同时优化轨道与组态系数 & $\mathcal{O}(N^4)$ + 活性空间指数 & 是\,/\,是 & 静态（强相关） & \texttt{! CASSCF def2-TZVPP TightSCF} + \texttt{\%casscf nel 8 norb 8 nroots 1} \\
+CASPT2 & 给 CASSCF 补动态相关（二阶多参考微扰），修复其能量 & $\mathcal{O}(N^5)$·活性空间 & 是\,/\,是 & 静态 + 动态 & \texttt{! CASPT2 def2-TZVPP TightSCF} + 同 \texttt{\%casscf} \\
+NEVPT2 & 提供零阶哈密顿 I 无入侵态、尺寸一致的多参考微扰 & $\mathcal{O}(N^5)$·活性空间 & 是\,/\,是 & 静态 + 动态 & \texttt{! NEVPT2 def2-TZVPP TightSCF} + 同 \texttt{\%casscf} \\
+MRCI & 对活性空间做变分组态展开，系统补足静态与动态相关 & $\mathcal{O}(N^7)$ 或活性空间指数 & 否\,/\,否（+Davidson 近似修正） & 静态 + 动态 & \texttt{! MRCI def2-TZVPP TightSCF} + 同 \texttt{\%casscf} \\
+SVWN5（LDA） & 用均匀电子气的精确结果近似 $E_\xc$，给出最小可行的 DFT & $\mathcal{O}(N^3)$ & 是\,/\,是 & 全部（半局域近似） & \texttt{! LDA def2-TZVPP TightSCF}（ORCA 取 SVWN5） \\
+PBE（GGA） & 加入密度梯度修正，普适改善分子与固体；复合变体 B97-3c 为内置基组的经验校正（非新梯级） & $\mathcal{O}(N^3)$ & 是\,/\,是 & 全部（半局域近似） & \texttt{! PBE def2-TZVPP TightSCF} \\
+TPSS（meta-GGA） & 加入动能密度 $\tau$，在少用经验参数的前提下逼近更高精度 & $\mathcal{O}(N^3)$ & 是\,/\,是 & 全部（半局域近似） & \texttt{! TPSS def2-TZVPP TightSCF} \\
+r\textsuperscript{2}SCAN（meta-GGA） & 用正则化恢复正确的渐近与约束行为；复合变体 r\textsuperscript{2}SCAN-3c 亦然（非新梯级） & $\mathcal{O}(N^3)$ & 是\,/\,是 & 全部（半局域近似） & \texttt{! R2SCAN def2-TZVPP TightSCF} \\
+B3LYP（全局杂化） & 混入 20\% 精确交换，修正半局域泛函的自相互作用误差 & $\mathcal{O}(N^4)$ & 是\,/\,是 & 全部（含精确交换） & \texttt{! B3LYP def2-TZVPP TightSCF} \\
+$\omega$B97M-V（范围分离杂化 + VV10） & 范围分离精确交换 + 非局域相关（VV10），提升非共价与热化学 & $\mathcal{O}(N^4)$ & 是\,/\,是 & 全部（含非局域） & \texttt{! wB97M-V def2-TZVPP TightSCF} \\
+B2PLYP（双杂化） & 用 MP2 微扰项把动态相关装进 DFT，兼得泛函与微扰的优点 & $\mathcal{O}(N^5)$ & 是\,/\,是 & 全部（DFT + MP2） & \texttt{! B2PLYP def2-TZVPP def2-TZVPP/C TightSCF} \\
+PWPB95（双杂化） & 双杂化的另一代表：PW 交换 + 双激发微扰项 & $\mathcal{O}(N^5)$ & 是\,/\,是 & 全部（DFT + MP2） & \texttt{! PWPB95 def2-TZVPP def2-TZVPP/C TightSCF} \\
+GFN2-xTB\,/\,GFN-FF（半经验与力场合并一行） & GFN2-xTB 是带自洽电荷的紧束缚半经验方法；GFN-FF 是彻底去掉电子的经典力场。两者把成本降到千原子级筛选 & GFN2-xTB $\mathcal{O}(N^2)$–$\mathcal{O}(N^3)$；GFN-FF $\mathcal{O}(N^2)$ & 是\,/\,是 & 无显式（参数化） & \texttt{! XTB} \,/\, \texttt{! GFN-FF} \\
+\end{longtable}
+}
+
+\noindent{\footnotesize 表注：$\Delta E_{\mathrm{method}} = \big(E_{\mathrm{method}} - E_{\mathrm{CCSD(T)}}\big)\times 627.509474$（kcal·mol$^{-1}$），正值表示高于参考；参考值取 CCSD(T)/def2-TZVPP 的 CH$_4$ 能量。表中"尺寸一致性\,/\,广延性"以"是\,/\,是"表示两者均满足。B97-3c 与 r\textsuperscript{2}SCAN-3c 使用内置基组（def2-mTZVP\,/\,def2-mTZVPP），是经验复合变体而非新梯级。\textbf{最后一行的 GFN2-xTB 与 GFN-FF 总能量不含完整电子结构意义，与量子化学方法的能量不可直接比较}，本讲义任何 $\Delta E$ 讨论都不使用它们。\par}
+
+\subsection{CH$_4$ 与 H$_2^-$ 算例协议}
+\label{ch:01:sec:protocols}
+
+全书用两个贯穿始终的算例把不同方法放到同一精度标尺上，所有数值只来自 \texttt{data/*.csv}。
+
+\textbf{CH$_4$ 单点}：采用 $T_d$ 对称构型，$r(\mathrm{C\!-\!H}) = 1.087$\,\AA（坐标块取 $a = 0.6276$\,\AA），电荷 0、多重度 1。20 个方法中有 18 个在 def2-TZVPP 下计算，B97-3c 与 r\textsuperscript{2}SCAN-3c 使用各自内置基组；参考值为 CCSD(T)/def2-TZVPP $E = -40.438598$\,Eh。能量与 $\Delta E$ 见 \texttt{data/ch4\_results.csv}。
+
+\textbf{H$_2^-$ 势能曲线}：6 个方法（UHF、MP2、CCSD(T)、CASSCF、NEVPT2、MRCI）各扫 8 个核间距 $R = 0.6$–$3.0$\,\AA（$0.6$–$1.5$ 步长 0.2，其后步长 0.5），全部 $n_{\mathrm{roots}} = 1$，活性空间 CAS(3,2)。数据见 \texttt{data/h2m\_pes.csv}。CH$_4$ 检验"同一分子、不同方法"的能量标尺，H$_2^-$ 检验"同一方法、不同键长"的行为差异，两者共同支撑第 16 章的决策树。
+
+\subsection{三种阅读路线}
+\label{ch:01:sec:routes}
+
+本书有 16 章，不必线性读完。三条推荐路线：
+
+\begin{enumerate}
+  \item \textbf{波函数优先}：第 2 章奠基后，依次读第 3--8 章（HF$\to$MP2$\to$CI$\to$CC$\to$CASSCF$\to$多参考），把 DFT 部分（第 9--13 章）作为对照阅读。适合想理解"相关能怎么被逐级补全"的读者。
+  \item \textbf{DFT 优先}：第 2 章后直接进入第 9 章，再沿雅各布天梯读第 10--13 章，最后回看第 3--8 章作为波函数参照。适合以泛函应用为主的读者。
+  \item \textbf{实用决策优先}：先读本章表~\ref{ch:01:tab:methods} 与第 16 章决策树，再按手上问题按需跳读具体章节（如弱相互作用读第 12 章，强静态相关读第 7--8 章，大规模筛选读第 14--15 章）。
+\end{enumerate}
+
+三条路线共享同一套符号（CONTRACT §1）与同一批算例，交叉阅读不会失去坐标。
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{把成本当作精度}：$\mathcal{O}(N^7)$ 的 CCSD(T) 并非对任何问题都优于便宜方法；强静态相关体系（拉伸键、双自由基）会让单参考方法系统性失败。
+  \item \textbf{跨方法直接比较总能量}：不同方法（尤其 GFN2-xTB 与 GFN-FF）的绝对总能量不在同一标尺上，只能比"相对参考的 $\Delta E$"。
+  \item \textbf{把方法地图当等级表}：波函数路线与 DFT 路线不是同一条阶梯，二者在成本—精度平面上各有覆盖区间。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+本章建立了全书的方法地图：四大家族（波函数方法、DFT、半经验、力场）、三根评价轴（精度、成本、相关类型），以及 17 行方法存在意义表~\ref{ch:01:tab:methods} 与两个贯穿算例的协议。所有后续章节都在回答"这个方法比上一级多解决了什么"，并共享同一套符号与算例。地图的第一站是一个看似根本的障碍：为什么多体薛定谔方程不能直接解？带着这个问题，我们进入第 2 章：为什么多电子方程不能直接解？

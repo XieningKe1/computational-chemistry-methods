@@ -1,3 +1,258 @@
+% ============================================================
+% sections/ch02-foundations.tex —— 第 2 章 为什么多电子方程不能直接解？
+% 页数配额：7 页（±1）。数值只取自 data/*.csv。
+% ============================================================
+
 \section{为什么多电子方程不能直接解？}
 \label{ch:02:sec:title}
-% TODO(T7/T8/...): 本章由后续写作任务填充；数值只取自 data/*.csv。
+
+% ---- 1. 问题链 ----
+\begin{problemchain}
+\textbf{上一章留下的问题：}多体方程不可解。\\
+\textbf{本章为什么存在：}建立全书共用的语言：玻恩--奥本海默近似、基组、相关能，以及衡量方法的尺寸一致性/广延性/变分性三把尺子。\\
+\textbf{本章留下的新问题：}既然精确解不可得，平均场能否近似？
+\end{problemchain}
+
+% ---- 2. 正文 ----
+\subsection{玻恩--奥本海默近似与电子哈密顿算符}
+\label{ch:02:sec:bo}
+
+分子是一个核与电子耦合的量子多体系统。在原子单位（$m_e = e = \hbar = 1$）下，非相对论全哈密顿算符为\citep{szabo1996,helgaker2000}
+\begin{equation}
+\op{H}
+= -\sum_{A}\frac{1}{2M_A}\nabla_A^2
+-\sum_i \frac{1}{2}\nabla_i^2
+-\sum_{A,i}\frac{Z_A}{r_{Ai}}
++\sum_{i<j}\frac{1}{r_{ij}}
++\sum_{A<B}\frac{Z_A Z_B}{R_{AB}},
+\label{ch:02:eq:mol-hamiltonian}
+\end{equation}
+其中 $A,B$ 标记原子核，$i,j$ 标记电子，$M_A$ 与 $Z_A$ 分别是核质量与核电荷，$r_{Ai}$、$r_{ij}$、$R_{AB}$ 分别为核电子、电子电子、核核距离。式~\eqref{ch:02:eq:mol-hamiltonian} 的五项依次是核动能、电子动能、核--电子吸引、电子--电子排斥与核--核排斥。
+
+电子质量远小于核质量（$M_A \gtrsim 1836\,m_e$），电子运动比核运动快得多。据此把总波函数近似为核波函数与电子波函数的乘积（式~\eqref{ch:02:eq:bo-separation}；玻恩--奥本海默，Born--Oppenheimer，BO 近似）：
+\begin{equation}
+\Psi(\mathbf{r},\mathbf{R}) \approx \chi(\mathbf{R})\,\psi(\mathbf{r};\mathbf{R}),
+\label{ch:02:eq:bo-separation}
+\end{equation}
+其中 $\mathbf{r}$ 与 $\mathbf{R}$ 分别代表全部电子与全部核坐标；分号表示电子波函数以核构型为参数。在 BO 近似下，核动能项被单独处理，电子满足固定核构型的电子薛定谔方程
+\begin{equation}
+\op{H}_{\mathrm{el}}\,\psi(\mathbf{r};\mathbf{R}) = E_{\mathrm{el}}(\mathbf{R})\,\psi(\mathbf{r};\mathbf{R}),
+\qquad
+\op{H}_{\mathrm{el}}
+= -\sum_i \frac{1}{2}\nabla_i^2
+-\sum_{A,i}\frac{Z_A}{r_{Ai}}
++\sum_{i<j}\frac{1}{r_{ij}},
+\label{ch:02:eq:el-hamiltonian}
+\end{equation}
+称为电子哈密顿算符。$E_{\mathrm{el}}(\mathbf{R})$ 是核构型的函数，加上核--核排斥即得势能面（potential energy surface，PES）。此后全书默认在 BO 近似下讨论电子问题，核坐标 $\mathbf{R}$ 只作为参数。
+
+BO 近似在化学中极为成功，但在几类情形下失效：势能面交叉（锥形交叉）、非绝热光化学过程、以及需要核量子效应（零点能、质子隧穿）的问题。此时必须保留核动能项 $\op{T}_n$ 并考虑非绝热耦合。本书全部算例都处于 BO 近似有效的基态电子结构范围内。
+
+BO 近似的意义在于把"核--电子耦合的复杂问题"降维成"给定核构型下解电子问题"；但式~\eqref{ch:02:eq:el-hamiltonian} 依然是一个 $N$ 电子耦合方程：电子动能、核--电子吸引与电子--电子排斥同时依赖所有电子坐标，连续变量上的偏微分方程没有一般解析解，数值离散所需的基函数数目随 $N$ 指数增长。这才是"多体方程不能直接解"的严格含义。本章用到的符号统一列于表~\ref{ch:02:tab:symbols}。
+
+\subsection{斯莱特行列式与反对称性}
+\label{ch:02:sec:slater}
+
+电子是费米子，交换任意两个电子的全部坐标（空间与自旋，记作 $\mathbf{x}$）必须改变波函数符号：
+\begin{equation}
+\Psi(\ldots,\mathbf{x}_i,\ldots,\mathbf{x}_j,\ldots)
+= -\,\Psi(\ldots,\mathbf{x}_j,\ldots,\mathbf{x}_i,\ldots).
+\label{ch:02:eq:antisymmetry}
+\end{equation}
+满足式~\eqref{ch:02:eq:antisymmetry} 的最简单多电子函数是斯莱特行列式（Slater determinant）。把 $N$ 个自旋轨道 $\psi_i$ 排成行列式
+\begin{equation}
+\Phi_0(\mathbf{x}_1,\ldots,\mathbf{x}_N)
+= \frac{1}{\sqrt{N!}}
+\begin{vmatrix}
+\psi_1(\mathbf{x}_1) & \psi_2(\mathbf{x}_1) & \cdots & \psi_N(\mathbf{x}_1)\\
+\psi_1(\mathbf{x}_2) & \psi_2(\mathbf{x}_2) & \cdots & \psi_N(\mathbf{x}_2)\\
+\vdots & \vdots & \ddots & \vdots\\
+\psi_1(\mathbf{x}_N) & \psi_2(\mathbf{x}_N) & \cdots & \psi_N(\mathbf{x}_N)
+\end{vmatrix},
+\label{ch:02:eq:slater}
+\end{equation}
+其归一化因子保证
+\begin{equation}
+\braket{\Phi_0|\Phi_0} = 1 .
+\label{ch:02:eq:determinant-normalization}
+\end{equation}
+行列式的两行相同（同一个 $\mathbf{x}$ 出现两次）即为零，这自动强制泡利不相容原理：同一个自旋轨道不能被两个电子占据。式~\eqref{ch:02:eq:slater} 与式~\eqref{ch:02:eq:antisymmetry} 是等价的：行列式交换两列即变号，而式~\eqref{ch:02:eq:determinant-normalization} 表明单行列式本身就是一个合法的归一化反对称试探函数。
+
+精确波函数可以写成所有可能的斯莱特行列式的线性组合（完全组态相互作用，full configuration interaction，FCI）：
+\begin{equation}
+\Psi_{\mathrm{FCI}} = \sum_I c_I\,\Phi_I,
+\label{ch:02:eq:fci-expansion}
+\end{equation}
+其中 $I$ 遍历全部行列式/组态，式~\eqref{ch:02:eq:fci-expansion} 在完备基下精确成立。但行列式数目随轨道数的组合数爆炸增长，FCI 只对小体系可行。HF 只取一项（式~\eqref{ch:02:eq:slater}）并优化占据轨道；后续方法则对式~\eqref{ch:02:eq:fci-expansion} 做不同处理——CI 截断求和（第 5 章）、CC 用指数拟设重排（第 6 章）、多参考方法选取活性空间（第 7--8 章）。行列式（或等价组态）语言是全书统一的工作语言。
+
+\subsection{基组：def2 系列与辅助基组}
+\label{ch:02:sec:basis}
+
+分子轨道用有限基函数（原子轨道）线性展开\citep{szabo1996}：
+\begin{equation}
+\phi_p(\mathbf{r}) = \sum_\mu C_{\mu p}\,\chi_\mu(\mathbf{r}),
+\label{ch:02:eq:basis-expansion}
+\end{equation}
+其中 $\mu,\nu,\lambda$ 是基函数（AO）指标，$\phi_p$ 是空间轨道。基组越大，展开越完备，但成本随基函数数目 $M$ 增长。本书默认使用 Ahlrichs 等开发的 def2 系列\citep{weigend2005def2}，其层级与辅助基组的用途见表~\ref{ch:02:tab:basis}。def2 系列与 Dunning 的相关一致基组\citep{dunning1989ccpvdz} 是两套常见选择，后者在向完基组外推时更方便。
+
+基函数通常取高斯型轨道（Gaussian-type orbital，GTO）的收缩组合：多个原高斯按固定系数线性组合成一个收缩基函数，既保留解析积分的便利，又逼近原子轨道的形状。在价 $\zeta$ 之外加入\textbf{极化函数}（更高角动量，如碳的 $d$、氢的 $p$）让轨道能扭曲变形；加入\textbf{弥散函数}（指数很小的 GTO）描述远离核的电子密度（阴离子、弱相互作用、里德堡态）。def2-SVP/TZVP/TZVPP 逐级增加价 $\zeta$ 与极化，但不含弥散函数。
+
+这一点直接影响本书的 H$_2^-$ 算例：阴离子 H$_2^-$ 的额外电子占据非常弥散的空间，紧凑基组（无弥散函数）下它并非真正束缚态。因此 \texttt{data/h2m\_pes.csv} 中 H$_2^-$ 的曲线用于比较各方法在拉伸区的行为差异，而非给出真实的电子亲和能。基组误差随基组增大单调减小，可用两个相邻基组的能量外推到完基组极限（complete basis set，CBS）；本书的全部 $\Delta E$ 讨论固定使用 def2-TZVPP，不做 CBS 外推。
+
+\begin{table}[t]
+\centering
+\small
+\caption{def2 系列基组层级与辅助基组角色。}\label{ch:02:tab:basis}
+\begin{tabular}{@{}lp{4.2cm}p{5.4cm}@{}}
+\toprule
+基组 & 组成 / 极化 & 典型用途 \\
+\midrule
+def2-SVP & 价双 $\zeta$ + 一组极化 & 大分子预优化、几何初筛 \\
+def2-TZVP & 价三 $\zeta$ + 一组极化 & 常规 DFT 几何/频率 \\
+def2-TZVPP & 价三 $\zeta$ + 两组极化 & 本书 QM 单点（含 CCSD(T) 参考） \\
+def2-QZVP & 价四 $\zeta$ + 极化 & 基准外推、高精度 \\
+def2-SVP/C 等 AuxC & 相关拟合辅助基组 & 加速 RI-MP2、双杂化等含 MP2 的计算 \\
+def2/J（AuxJ） & 库仑拟合辅助基组 & 加速 SCF 的库仑项（RI-J） \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+辅助基组（auxiliary basis set）不增加轨道展开的完备性，只用于分辨率恒等式（resolution-of-the-identity，RI）近似：把四指标双电子积分拆成三/两指标积分的组合，从而大幅降低 MP2 与 SCF 库仑项的成本\citep{weigend2006aux,hellweg2007aux}。本书 CH$_4$ 算例中 B2PLYP 与 PWPB95 的输入都带 \texttt{def2-TZVPP/C}，正是为 RI-MP2 部分提供 AuxC。
+
+有限基组引入一个系统误差：基组叠加误差（basis set superposition error，BSSE）。在二聚体 AB 中，片段 A 会"借用"片段 B 的基函数来降低自身能量，使相互作用被人为增强。定义片段能量时若使用全二聚体基组，可把 BSSE 扣除：\begin{equation}
+\Delta E_{\mathrm{BSSE}}
+= \big(E_A^{AB} + E_B^{AB}\big) - \big(E_A^{A} + E_B^{B}\big),
+\label{ch:02:eq:bsse}
+\end{equation}
+上标表示该能量计算所用的基组。式~\eqref{ch:02:eq:bsse} 即几何抗叠加（counterpoise）校正的核心；对弱相互作用体系（氢键、色散复合物），BSSE 常与真实相互作用能同量级，必须处理。
+
+\subsection{变分原理、密度矩阵与自然轨道}
+\label{ch:02:sec:variational}
+
+对任意归一化试探波函数 $\Psi$，能量期望值是基态能量的上界（变分原理）：
+\begin{equation}
+E[\Psi]
+= \frac{\bracket{\Psi|\op{H}|\Psi}}{\braket{\Psi|\Psi}}
+\ge E_0,
+\label{ch:02:eq:variational}
+\end{equation}
+等号仅在 $\Psi$ 为精确基态时成立。式~\eqref{ch:02:eq:variational} 是 HF、CI、CASSCF 等变分方法的理论基础：把 $\Psi$ 限制在一个参数族内并最小化 $E[\Psi]$，得到的能量不会低于真实基态。
+
+把式~\eqref{ch:02:eq:variational} 用于式~\eqref{ch:02:eq:slater} 的单行列式并对轨道变分，可得 HF 能量
+\begin{equation}
+E_\HF = \sum_i h_{ii} + \frac{1}{2}\sum_{ij}\big[(ii\vert jj) - (ij\vert ji)\big],
+\label{ch:02:eq:hf-energy}
+\end{equation}
+其中 $h_{ii}$ 是单电子积分，$(ii\vert jj)$ 与 $(ij\vert ji)$ 分别是库仑与交换积分。式~\eqref{ch:02:eq:hf-energy} 只包含占据轨道；交换项 $-(ij\vert ji)$ 仅出现在同自旋电子之间，是反对称性带来的纯量子效应。如何求解式~\eqref{ch:02:eq:hf-energy} 正是第 3 章的主题。
+
+多电子波函数的信息可以压缩到约化密度矩阵里。一阶约化密度矩阵（1-RDM）定义为\citep{lowdin1955}
+\begin{equation}
+\gamma_1(\mathbf{x}_1,\mathbf{x}_1')
+= N\!\int \Psi(\mathbf{x}_1,\mathbf{x}_2,\ldots,\mathbf{x}_N)\,
+\Psi^{*}(\mathbf{x}_1',\mathbf{x}_2,\ldots,\mathbf{x}_N)\,
+\dd\mathbf{x}_2\cdots\dd\mathbf{x}_N .
+\label{ch:02:eq:1rdm}
+\end{equation}
+它的对角元 $\gamma_1(\mathbf{x},\mathbf{x})$ 就是自旋密度，对自旋求和给出电子密度 $\rho(\mathbf{r})$。$\gamma_1$（式~\eqref{ch:02:eq:1rdm}）是厄米算符，可以正交对角化：
+\begin{equation}
+\int \gamma_1(\mathbf{x},\mathbf{x}')\,\phi_k(\mathbf{x}')\,\dd\mathbf{x}'
+= n_k\,\phi_k(\mathbf{x}),
+\label{ch:02:eq:natural-orbital}
+\end{equation}
+本征函数 $\phi_k$ 称为自然轨道（natural orbital），本征值 $n_k$ 是自然占据数（natural occupation number），满足 $0 \le n_k \le 1$（对自旋轨道求和后 $0 \le n_k \le 2$）且 $\sum_k n_k = N$。自然占据数是最有用的诊断量之一：若所有 $n_k$ 都接近 0 或 2，说明体系近似单参考；若出现明显偏离 0/2 的分数占据数，说明存在强静态相关（见第 7 章 H$_2^-$ 与 CASSCF 算例）。
+
+\subsection{动态相关与静态相关}
+\label{ch:02:sec:correlation}
+
+HF 在平均场意义上是最优的单行列式，但它缺少电子瞬时回避带来的能量降低。把相关能定义为\citep{lowdin1959corr}
+\begin{equation}
+E_{\mathrm{corr}} = E_{\mathrm{exact}} - E_\HF,
+\label{ch:02:eq:corr-energy}
+\end{equation}
+它总是负的（精确能量低于 HF）。相关能被进一步分成两类：
+
+\begin{itemize}
+  \item \textbf{动态相关}（dynamic correlation）：电子因瞬时库仑排斥而互相回避，涉及大量组态的小权重贡献。单参考方法（MP2、CCSD(T)、双杂化）擅长处理它。
+  \item \textbf{静态相关}（static/nondynamic correlation）：两个或多个电子组态近简并（拉伸键、双自由基、过渡金属多重态），单行列式描述根本不够。需要多参考方法（CASSCF、CASPT2/NEVPT2、MRCI）。
+\end{itemize}
+
+两类相关需要不同的工具，这是全书方法地图的深层结构。第 1 章表~\ref{ch:01:tab:methods} 的"相关类型"列即按此分类。
+
+两个算例勾出两类的边界。CH$_4$ 在平衡构型附近由单个闭壳层行列式主导，属于典型动态相关体系：HF 比 CCSD(T)/def2-TZVPP 高 $140.68$\,kcal·mol$^{-1}$（由 \texttt{data/ch4\_results.csv} 换算），其中绝大部分是动态相关。相反，H$_2^-$ 在拉伸区存在近简并组态，单参考微扰因小分母而行为异常——这正是静态相关的标志。判断一个体系属于哪一类，可看自然轨道占据数（式~\eqref{ch:02:eq:natural-orbital}）：接近 0 或 2 表示动态主导，出现显著分数占据则表示静态主导。
+
+\subsection{尺寸一致性、尺寸广延性与变分性}
+\label{ch:02:sec:size}
+
+最后是贯穿全书的三把尺子。\textbf{尺寸一致性}（size consistency）：两个不相互作用片段 A、B 在无限分离时，方法给出的总能量等于各片段能量之和，
+\begin{equation}
+E_{AB}(R\to\infty) = E_A + E_B .
+\label{ch:02:eq:size-consistency}
+\end{equation}
+\textbf{尺寸广延性}（size extensivity）：能量随粒子数线性增长，对 $n$ 个互不作用（或等价的重复单元）体系
+\begin{equation}
+E_{A_n} = n\,E_A ,
+\label{ch:02:eq:size-extensivity}
+\end{equation}
+其中 $A_n$ 表示 $n$ 个不相互作用的片段。广延性比一致性更强：它要求能量在任意规模下都正确标度，而不只在分离极限。耦合簇（CC）天然满足两者；截断 CI（如 CISD）两者都不满足，这正是第 6 章的出发点。
+
+\textbf{变分性}（variationality）：方法给出的能量是否为真实基态的上界。HF、CI、CASSCF 是变分的（式~\eqref{ch:02:eq:variational} 适用）；MP2 与 CCSD(T) 一般不是，其能量可能低于或高于精确值。变分性与尺寸一致性相互独立：CC 非变分但尺寸一致，CISD 变分但不尺寸一致。表~\ref{ch:02:tab:properties} 汇总了常见方法在这三把尺子上的表现。
+
+\begin{table}[t]
+\centering
+\small
+\caption{常见方法的变分性与尺寸行为（与第 1 章表~\ref{ch:01:tab:methods} 互为纵向/横向视角）。}\label{ch:02:tab:properties}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+方法 & 变分性 & 尺寸一致性 & 尺寸广延性 \\
+\midrule
+HF & 是 & 是 & 是 \\
+MP2 & 否 & 是 & 是 \\
+CISD & 是 & 否 & 否 \\
+CCSD(T) & 否 & 是 & 是 \\
+CASSCF & 是 & 是 & 是 \\
+MRCI & 是 & 否 & 否 \\
+半局域/杂化 DFT & 是（对给定泛函） & 是 & 是 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\small
+\caption{本章符号约定（冻结自 CONTRACT §1）。}\label{ch:02:tab:symbols}
+\begin{tabular}{@{}ll@{}}
+\toprule
+记号 & 含义 \\
+\midrule
+$i,j,k$ & 占据自旋轨道 \\
+$a,b,c$ & 虚自旋轨道 \\
+$p,q,r$ & 一般自旋轨道 \\
+$\mu,\nu,\lambda$ & 基函数（AO）指标 \\
+$A,B$ & 原子核指标 \\
+$\Psi$ & 精确多电子波函数 \\
+$\Phi_0$ & HF 基态斯莱特行列式 \\
+$\chi_\mu(\mathbf{r})$ & 基函数 \\
+$\psi_p(\mathbf{x})$ & 自旋轨道 \\
+$\phi_p(\mathbf{r})$ & 空间轨道 \\
+$\varepsilon_p$ & 轨道能 \\
+$h_{pq}$ & 单电子积分 \\
+$(pq\vert rs)$ & 双电子积分（化学家记号） \\
+$E_{\mathrm{corr}}$ & 相关能（Löwdin 定义） \\
+$\rho(\mathbf{r})$ & 电子密度 \\
+$\gamma_1(\mathbf{x},\mathbf{x}')$ & 一阶约化密度矩阵 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ---- 5. 常见陷阱 ----
+\begin{pitfall}
+\begin{itemize}
+  \item \textbf{混淆尺寸一致性与尺寸广延性}：一致性只要求分离极限（式~\eqref{ch:02:eq:size-consistency}），广延性要求任意规模（式~\eqref{ch:02:eq:size-extensivity}）；CISD 在两者上都失败，但原因层次不同。
+  \item \textbf{把 BSSE 当作相关误差}：式~\eqref{ch:02:eq:bsse} 来自有限基组而非电子相关；即使方法本身很精确，小基组也会产生 BSSE。
+  \item \textbf{忽略弱相互作用中的 BSSE}：氢键、$\pi$ 堆积、色散复合物的相互作用能很小，未校正的 BSSE 可能占主导，必须做 counterpoise 校正或使用大基组。
+\end{itemize}
+\end{pitfall}
+
+% ---- 6. 小结 + 过渡 ----
+\subsection*{小结}
+本章语言可概括为四句话：BO 近似把问题降维到电子哈密顿算符式~\eqref{ch:02:eq:el-hamiltonian}；反对称性要求波函数是斯莱特行列式式~\eqref{ch:02:eq:slater}，而基组式~\eqref{ch:02:eq:basis-expansion} 把连续问题截断成有限维问题；相关能式~\eqref{ch:02:eq:corr-energy} 分动态与静态两类，分别由单参考与多参考方法处理；尺寸一致性/广延性/变分性三把尺子（式~\eqref{ch:02:eq:size-consistency}、\eqref{ch:02:eq:size-extensivity}）贯穿全书。既然精确解不可得，最简单的近似就是用一个行列式、在平均场意义下求最优——它到底能走多远？带着这个问题，我们进入第 3 章：HF：平均场能走多远？
