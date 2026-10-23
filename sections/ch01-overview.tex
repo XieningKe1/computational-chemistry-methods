@@ -28,57 +28,92 @@
   \item \textbf{分子力场}（force field）：彻底去掉电子，用经典势能面描述原子间相互作用——键伸缩、角弯曲、二面角（键合项）加上 Lennard-Jones 与库仑（非键合项）。GFN-FF、UFF、AMBER、CHARMM、OPLS-AA 都属于这一类\citep{spicher2020gfnff,rappe1992uff,cornell1995amber,jorgensen1996oplsaa}。
 \end{enumerate}
 
-四大家族的关系不是"谁替代谁"，而是"覆盖不同的规模与精度需求"。图~\ref{ch:01:fig:map} 给出全书的方法地图：左侧波函数路线自 HF 逐级加相关，右侧 DFT 路线沿雅各布天梯逐级加非局域信息，两条路线最终都在大规模端收敛到 xTB 与力场。这张地图是后续每一章的坐标：每个方法都回答"我比上一级多解决了什么"。
+四大家族的关系不是"谁替代谁"，而是"覆盖不同的规模与精度需求"。图~\ref{ch:01:fig:map} 把全书方法排成四条泳道：波函数单参考路线（HF、MP2、CISD、CCSD(T)）、多参考分支（CASSCF、CASPT2/NEVPT2/MRCI）、密度泛函雅各布天梯（KS-DFT、LDA、GGA、meta-GGA、杂化、双杂化）以及半经验\,/\,力场（GFN2-xTB、GFN-FF）。同一条泳道内向右一级，就对应问题链中的一次"修复"——箭头上的文字正是该方法多解决的问题；唯一的跨泳道分岔是 HF 到 CASSCF 的虚线箭头：单参考假设在强静态相关下失效，必须转入活性空间。方框第二行给出章号与成本标度，这张地图因此同时是后续每一章的坐标。
 
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[
   every node/.style={font=\small},
-  wf/.style={draw=oiBlue, thick, rounded corners=1.5pt, fill=oiBlue!6,
-             inner sep=3pt, align=center, minimum width=2.5cm, minimum height=0.6cm},
-  dft/.style={draw=oiGreen, thick, rounded corners=1.5pt, fill=oiGreen!6,
-              inner sep=3pt, align=center, minimum width=2.5cm, minimum height=0.6cm},
-  low/.style={draw=oiVermillion, thick, rounded corners=1.5pt, fill=oiVermillion!8,
-              inner sep=4pt, align=center, minimum width=4.0cm, minimum height=0.75cm},
-  ar/.style={-{Stealth[length=2mm]}, thick, draw=black!70},
-  lab/.style={font=\small\bfseries}
+  wf/.style={draw=oiBlue, thick, rounded corners=1pt, fill=oiBlue!7,
+             align=center, minimum height=0.78cm, inner sep=2pt},
+  dft/.style={draw=oiGreen, thick, rounded corners=1pt, fill=oiGreen!7,
+              align=center, minimum height=0.78cm, inner sep=1pt, font=\footnotesize},
+  low/.style={draw=oiVermillion, thick, dashed, rounded corners=1pt, fill=oiVermillion!8,
+              align=center, minimum height=0.78cm, inner sep=2pt},
+  ar/.style={-{Stealth[length=1.8mm]}, thick, draw=black!75},
+  lab/.style={font=\scriptsize, color=black!80, align=center},
+  head/.style={font=\footnotesize\bfseries, align=right},
+  subhead/.style={font=\scriptsize, color=black!60, align=right}
 ]
-  % ---- 波函数路线（左） ----
-  \node[wf] (hf)     at (0,7.2) {HF};
-  \node[wf] (mp2)    at (0,6.0) {MP2};
-  \node[wf] (ci)     at (0,4.8) {CI};
-  \node[wf] (cc)     at (0,3.6) {CC};
-  \node[wf] (casscf) at (0,2.4) {CASSCF};
-  \node[wf] (mr)     at (0,1.2) {MRPT / MRCI};
-  % ---- DFT 路线（右） ----
-  \node[dft] (lda)  at (5.4,7.2) {LDA};
-  \node[dft] (gga)  at (5.4,6.0) {GGA};
-  \node[dft] (meta) at (5.4,4.8) {meta-GGA};
-  \node[dft] (hyb)  at (5.4,3.6) {hybrid};
-  \node[dft] (dh)   at (5.4,2.4) {double hybrid};
-  % ---- 大规模端 ----
-  \node[low] (low) at (5.4,-0.35) {GFN2-xTB \,/\, GFN-FF};
-  % ---- 链内箭头 ----
-  \draw[ar] (hf)--(mp2);
-  \draw[ar] (mp2)--(ci);
-  \draw[ar] (ci)--(cc);
-  \draw[ar] (cc)--(casscf);
-  \draw[ar] (casscf)--(mr);
-  \draw[ar] (lda)--(gga);
-  \draw[ar] (gga)--(meta);
-  \draw[ar] (meta)--(hyb);
-  \draw[ar] (hyb)--(dh);
-  % ---- 收敛到 xTB / 力场 ----
-  \draw[ar] (mr.south) -- ++(0,-0.4) -| (low.west);
-  \draw[ar] (dh)--(low);
-  % ---- 列标题 ----
-  \node[lab, color=oiBlue]  at (0,8.15)   {波函数路线};
-  \node[lab, color=oiGreen] at (5.4,8.15) {密度泛函路线};
-  % ---- 成本箭头 ----
-  \draw[ar, draw=black!45] (-1.7,1.2)--(-1.7,7.2)
-        node[midway,left,font=\footnotesize,align=center]{精度\\成本};
+  \useasboundingbox (0.0,0.78) rectangle (15.42,11.45);
+
+  % ================= 共同起点 =================
+  \node[draw=black!30, fill=black!4, rounded corners=2pt, align=center,
+        inner sep=5pt, minimum width=11.2cm, minimum height=0.60cm]
+        at (9.98,11.10)
+        {\scriptsize 共同起点：$N$ 电子多体薛定谔方程（第 2 章）——精确解不可得，只能选择近似掉什么};
+
+  % ================= 泳道 A：单参考 =================
+  \node[wf, minimum width=2.0cm] (hf)    at (5.35,9.55)  {HF\\[-1pt]{\tiny 3章\,·\,$N^4$}};
+  \node[wf, minimum width=2.0cm] (mp2)   at (7.88,9.55)  {MP2\\[-1pt]{\tiny 4章\,·\,$N^5$}};
+  \node[wf, minimum width=2.0cm] (cisd)  at (10.41,9.55) {CISD\\[-1pt]{\tiny 5章\,·\,$N^6$}};
+  \node[wf, minimum width=2.0cm] (ccsdt) at (12.94,9.55) {CCSD(T)\\[-1pt]{\tiny 6章\,·\,$N^7$}};
+  \draw[ar] (hf) -- (mp2);
+  \draw[ar] (mp2) -- (cisd);
+  \draw[ar] (cisd) -- (ccsdt);
+  \node[lab] at (6.615,10.27) {+动态相关};
+  \node[lab] at (9.145,10.27) {+系统激发};
+  \node[lab] at (11.675,10.27) {+尺寸一致性};
+
+  % ================= 泳道 B：多参考 =================
+  \node[wf, minimum width=2.45cm] (casscf) at (5.50,7.15) {CASSCF\\[-1pt]{\tiny 7章\,·\,$N^4$+活性空间}};
+  \node[wf, minimum width=5.7cm] (mr) at (10.20,7.15)
+       {CASPT2 \,/\, NEVPT2 \,/\, MRCI\\[-1pt]{\tiny 8章\,·\,$N^5$–$N^7$+活性空间}};
+  \draw[ar] (casscf) -- (mr);
+  \node[lab] at (6.90,7.87) {+动态相关};
+  \draw[-{Stealth[length=1.8mm]}, thick, dashed, draw=black!70]
+       (hf.south) -- (5.35,7.54);
+  \node[lab, anchor=west, align=left] at (5.58,8.78) {单参考假设失效（强静态相关）};
+
+  % ================= 泳道 C：DFT =================
+  \node[dft, minimum width=1.55cm] (ks)   at (5.125,4.55)  {KS-DFT\\[-1pt]{\tiny 9章\,·\,$N^3$}};
+  \node[dft, minimum width=1.55cm] (lda)  at (6.955,4.55)  {LDA\\[-1pt]{\tiny 10章\,·\,$N^3$}};
+  \node[dft, minimum width=1.55cm] (gga)  at (8.785,4.55)  {GGA\\[-1pt]{\tiny 10章\,·\,$N^3$}};
+  \node[dft, minimum width=1.85cm] (meta) at (10.765,4.55) {meta-GGA\\[-1pt]{\tiny 11章\,·\,$N^3$}};
+  \node[dft, minimum width=1.55cm] (hyb)  at (12.745,4.55) {杂化\\[-1pt]{\tiny 12章\,·\,$N^4$}};
+  \node[dft, minimum width=1.55cm] (dh)   at (14.575,4.55) {双杂化\\[-1pt]{\tiny 13章\,·\,$N^5$}};
+  \draw[ar] (ks) -- (lda);
+  \draw[ar] (lda) -- (gga);
+  \draw[ar] (gga) -- (meta);
+  \draw[ar] (meta) -- (hyb);
+  \draw[ar] (hyb) -- (dh);
+  \node[lab] at (6.04,5.27)  {近似 $E_{\mathrm{xc}}$};
+  \node[lab] at (7.87,5.27)  {$+\,\nabla\rho$};
+  \node[lab] at (9.70,5.27)  {$+\,\tau$};
+  \node[lab] at (11.83,5.27) {+精确交换};
+  \node[lab] at (13.66,5.27) {+ MP2 微扰};
+
+  % ================= 泳道 D：半经验与力场 =================
+  \node[low, minimum width=2.9cm] (xtb) at (5.80,2.05) {GFN2-xTB\\[-1pt]{\tiny 14章\,·\,$N^2$–$N^3$}};
+  \node[low, minimum width=2.9cm] (ff)  at (9.90,2.05) {GFN-FF\\[-1pt]{\tiny 15章\,·\,$N^2$}};
+  \draw[ar] (xtb) -- (ff);
+  \node[lab] at (7.85,2.77) {去掉电子};
+
+  % ================= 左侧泳道标题 =================
+  \node[head, color=oiBlue, anchor=east] at (4.15,9.82) {波函数方法};
+  \node[subhead, anchor=east] at (4.15,9.36) {单参考：逐级补动态相关};
+  \node[head, color=oiBlue, anchor=east] at (4.15,7.42) {多参考分支};
+  \node[subhead, anchor=east] at (4.15,6.96) {活性空间容纳静态相关};
+  \node[head, color=oiGreen, anchor=east] at (4.15,4.82) {密度泛函理论};
+  \node[subhead, anchor=east] at (4.15,4.36) {雅各布天梯：逐级加非局域信息};
+  \node[head, color=oiVermillion, anchor=east] at (4.15,2.32) {半经验 \,/\, 力场};
+  \node[subhead, anchor=east] at (4.15,1.86) {参数化：放弃电子细节换规模};
+
+  % ================= 图例 =================
+  \node[lab, anchor=west, align=left] at (4.35,1.00)
+    {箭头：该级为修复上一级的哪种失效而存在　·　方框第二行：章号 · 成本标度};
 \end{tikzpicture}
-\caption{全书方法地图。左侧为波函数路线（HF$\to$MP2$\to$CI$\to$CC$\to$CASSCF$\to$多参考微扰\,/\,MRCI），右侧为密度泛函路线（LDA$\to$GGA$\to$meta-GGA$\to$杂化$\to$双杂化），两条路线在大规模端共同收敛到半经验（GFN2-xTB）与力场（GFN-FF）。}
+\caption{全书方法地图。四条泳道依次为：波函数单参考（HF、MP2、CISD、CCSD(T)）、波函数多参考分支（CASSCF、CASPT2/NEVPT2/MRCI）、密度泛函雅各布天梯（KS-DFT、LDA、GGA、meta-GGA、杂化、双杂化）与半经验\,/\,力场（GFN2-xTB、GFN-FF）。泳道内每个箭头标出这一级修复了上一级的哪种失效；虚线箭头是唯一的跨泳道分岔：单参考假设在强静态相关下失效，转入多参考路线。方框第二行为章号与成本标度 $\mathcal{O}(N^n)$；自上而下，典型成本降低、可处理体系增大。}
 \label{ch:01:fig:map}
 \end{figure}
 
